@@ -1,0 +1,22 @@
+/* Shared layout helpers */
+
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-pad);
+}
+
+/* Brand logo — used in header & footer */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  line-height: 0;
+}
+
+.brand-logo {
+  display: block;
+  height: 3.5rem;
+  width: auto;
+}

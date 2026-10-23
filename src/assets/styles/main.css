@@ -1,0 +1,9 @@
+/* App stylesheet entry — import order matters (tokens → base → type → layout → components) */
+
+@import './variables.css';
+@import './base.css';
+@import './typography.css';
+@import './layout.css';
+
+@import './components/header.css';
+@import './components/footer.css';

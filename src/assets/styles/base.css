@@ -1,0 +1,13 @@
+/* Global resets and page defaults */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+}

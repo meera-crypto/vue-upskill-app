@@ -1,0 +1,74 @@
+/* Design tokens — colors, spacing, layout sizes */
+
+:root {
+  /* Palette
+     Primary   → navy blue   (brand, headings, main UI)
+     Secondary → emerald     (accents, buttons, links)
+     Tertiary  → soft white  (page / surface background)
+     Neutral   → coral grey  (borders, muted text)
+  */
+  --color-primary: #1a2b4a;
+  --color-secondary: #059669;
+  --color-tertiary: #f8f7f4;
+  --color-neutral: #a89f9a;
+
+  --color-text: var(--color-primary);
+  --color-text-muted: var(--color-neutral);
+  --color-bg: var(--color-tertiary);
+  --color-accent: var(--color-secondary);
+
+  /* Container */
+  --container-max: 1280px;
+  --container-pad: 1rem;
+
+  /*
+   * Fluid typography — clamp(min, preferred, max)
+   * Sizes scale with the viewport between mobile (min) and desktop (max).
+   * No media-query jumps; preferred uses rem + vw.
+   */
+  --font-size-body: 1rem;
+  --line-height-body: 1.5;
+
+  --font-size-h1: clamp(1.75rem, 1.1rem + 2.8vw, 2.5rem);
+  --line-height-h1: 1.2;
+
+  --font-size-h2: clamp(1.5rem, 1.05rem + 2vw, 2rem);
+  --line-height-h2: 1.25;
+
+  --font-size-h3: clamp(1.375rem, 1.05rem + 1.4vw, 1.75rem);
+  --line-height-h3: 1.3;
+
+  --font-size-h4: clamp(1.25rem, 1.05rem + 0.9vw, 1.5rem);
+  --line-height-h4: 1.35;
+
+  --font-size-h5: clamp(1.125rem, 1.02rem + 0.5vw, 1.25rem);
+  --line-height-h5: 1.4;
+
+  --font-size-h6: clamp(1rem, 0.98rem + 0.3vw, 1.125rem);
+  --line-height-h6: 1.45;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --container-pad: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --container-pad: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --container-max: 1120px;
+    --container-pad: 2.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --container-max: 1280px;
+  }
+}

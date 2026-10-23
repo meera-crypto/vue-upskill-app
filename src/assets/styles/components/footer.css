@@ -1,0 +1,18 @@
+/* Footer */
+
+.site-footer {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 4rem;
+}
+
+.footer-nav {
+  display: flex;
+  gap: 1.5rem;
+}

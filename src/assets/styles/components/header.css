@@ -1,0 +1,30 @@
+/* Header */
+
+.site-header {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 4rem;
+}
+
+.header-nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-link {
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.nav-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
