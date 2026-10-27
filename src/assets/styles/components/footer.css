@@ -2,17 +2,78 @@
 
 .site-footer {
   background-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-soft-white);
 }
 
 .footer-inner {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  min-height: 4rem;
+  gap: 1.5rem;
+  padding-block: 1.25rem;
 }
 
 .footer-nav {
   display: flex;
-  gap: 1.5rem;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.footer-nav .nav-link {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.footer-nav .nav-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.footer-social {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.25rem;
+}
+
+.footer-social .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  opacity: 0.9;
+  transition: opacity 0.15s ease;
+}
+
+.footer-social .nav-icon:hover {
+  opacity: 1;
+}
+
+/* Copyright + terms row */
+.footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  padding-block: 0.85rem 1.25rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-soft-white) 20%, transparent);
+  font-size: 0.875rem;
+}
+
+.footer-copy {
+  margin: 0;
+  opacity: 0.85;
+}
+
+.footer-legal .nav-link {
+  color: inherit;
+  text-decoration: none;
+  opacity: 0.9;
+}
+
+.footer-legal .nav-link:hover {
+  opacity: 1;
+  text-decoration: underline;
 }

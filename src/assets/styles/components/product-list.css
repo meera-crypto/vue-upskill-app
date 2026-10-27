@@ -1,0 +1,35 @@
+/* Product listing section */
+
+.product-list {
+  padding-block: 2.5rem 3rem;
+}
+
+.product-list__heading {
+  margin-block: 0 1.5rem;
+}
+
+.product-list__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.product-list__item {
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .product-list__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-list__grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}

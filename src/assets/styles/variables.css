@@ -2,24 +2,39 @@
 
 :root {
   /* Palette
-     Primary   → navy blue   (brand, headings, main UI)
-     Secondary → emerald     (accents, buttons, links)
-     Tertiary  → soft white  (page / surface background)
-     Neutral   → coral grey  (borders, muted text)
+     Primary    → navy blue   (brand, headings, main UI)
+     Secondary  → emerald     (accents, buttons, links)
+     Soft white → warm off-white (surfaces, light text on dark)
+     Black      → pure black  (text accents, overlays, mixes)
+     Tertiary   → soft white  (alias for page / surface background)
+     Neutral    → coral grey  (borders, muted text)
+     Pink       → rose        (favorites heart)
+     Danger     → red         (header count badges)
   */
   --color-primary: #1a2b4a;
   --color-secondary: #059669;
-  --color-tertiary: #f8f7f4;
+  --color-soft-white: #f8f7f4;
+  --color-black: #000000;
+  --color-tertiary: var(--color-soft-white);
   --color-neutral: #a89f9a;
+  --color-pink: #c2185b;
+  --color-danger: #e53935;
 
   --color-text: var(--color-primary);
   --color-text-muted: var(--color-neutral);
   --color-bg: var(--color-tertiary);
   --color-accent: var(--color-secondary);
+  --color-favorite: var(--color-pink);
+  --color-badge: var(--color-danger);
 
   /* Container */
   --container-max: 1280px;
   --container-pad: 1rem;
+
+  /* Primary font — Noto Sans (body, UI, headings) */
+  --font-primary: "Noto Sans", sans-serif;
+  --font-body: var(--font-primary);
+  --font-heading: var(--font-primary);
 
   /*
    * Fluid typography — clamp(min, preferred, max)
@@ -46,12 +61,6 @@
 
   --font-size-h6: clamp(1rem, 0.98rem + 0.3vw, 1.125rem);
   --line-height-h6: 1.45;
-}
-
-@media (min-width: 640px) {
-  :root {
-    --container-pad: 1.5rem;
-  }
 }
 
 @media (min-width: 768px) {

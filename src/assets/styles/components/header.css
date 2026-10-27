@@ -2,29 +2,194 @@
 
 .site-header {
   background-color: var(--color-primary);
-  color: #fff;
+  color: var(--color-soft-white);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 4rem;
+  min-height: 4.5rem;
+  position: relative;
 }
 
-.header-nav {
-  display: flex;
-  gap: 1.5rem;
-}
-
-.nav-link {
+/* —— Hamburger button (mobile) —— */
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
   color: inherit;
-  text-decoration: none;
-  font-size: 0.95rem;
-  opacity: 0.9;
+  cursor: pointer;
+  z-index: 1;
 }
 
-.nav-link:hover {
+.menu-toggle:hover {
+  background-color: color-mix(in srgb, var(--color-soft-white) 12%, transparent);
+}
+
+/* —— Backdrop over page content —— */
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background-color: color-mix(in srgb, var(--color-black) 45%, transparent);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.25s ease,
+    visibility 0.25s ease;
+}
+
+.menu-backdrop--open {
   opacity: 1;
-  text-decoration: underline;
+  visibility: visible;
+}
+
+/* —— Drawer: slides in from the right (mobile) —— */
+.header-nav {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  width: min(18rem, 85vw);
+  height: 100vh;
+  height: 100dvh;
+  padding: 1rem 1.25rem 1.5rem;
+  background-color: var(--color-primary);
+  color: var(--color-soft-white);
+  box-shadow: -0.5rem 0 1.5rem color-mix(in srgb, var(--color-black) 25%, transparent);
+  transform: translateX(100%);
+  transition: transform 0.28s ease;
+}
+
+.header-nav--open {
+  transform: translateX(0);
+}
+
+.header-nav__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-soft-white) 18%, transparent);
+}
+
+.header-nav__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.menu-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.menu-close:hover {
+  background-color: color-mix(in srgb, var(--color-soft-white) 12%, transparent);
+}
+
+.nav-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 0.5rem;
+  color: inherit;
+  opacity: 0.9;
+  text-decoration: none;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.nav-icon:hover {
+  opacity: 1;
+  background-color: color-mix(in srgb, var(--color-soft-white) 10%, transparent);
+}
+
+.nav-label {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.nav-badge {
+  position: absolute;
+  top: 0.65rem;
+  left: 1.35rem;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background-color: var(--color-badge);
+  color: var(--color-soft-white);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.125rem;
+  text-align: center;
+}
+
+/* —— Desktop: no drawer — icons in the header bar —— */
+@media (min-width: 768px) {
+  .menu-toggle,
+  .menu-backdrop,
+  .header-nav__top {
+    display: none;
+  }
+
+  .header-nav {
+    position: static;
+    transform: none;
+    width: auto;
+    height: auto;
+    padding: 0;
+    flex-direction: row;
+    align-items: center;
+    gap: 2rem;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .nav-icon {
+    display: inline-flex;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .nav-icon:hover {
+    background-color: transparent;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .nav-badge {
+    top: -0.35rem;
+    left: auto;
+    right: -0.45rem;
+  }
 }
