@@ -111,38 +111,27 @@ const cartCount = computed(() =>
   Object.values(state.cart).reduce((sum, qty) => sum + qty, 0),
 );
 
-/** First add: set quantity to 1 (only when in stock). */
+/** First add: set quantity to 1 (only when in stock). Qty +/- comes later on the product page. */
 function addToCart(product) {
   if (!product?.stock) return;
   state.cart[product.id] = 1;
 }
 
-function increaseCart(product) {
-  if (!product?.stock) return;
-  const current = state.cart[product.id] ?? 0;
-  if (current >= product.stock) return;
-  state.cart[product.id] = current + 1;
-}
-
-/** Decrease; remove the product when quantity hits 0. */
-function decreaseCart(product) {
-  const nextQty = (state.cart[product.id] ?? 0) - 1;
-  if (nextQty <= 0) {
-    delete state.cart[product.id];
-  } else {
-    state.cart[product.id] = nextQty;
-  }
-}
-
 /**
  * Buy now: put the product in the cart (if it isn’t already), then go to cart.
- * Cart route can use router.push({ name: 'cart' }) once that page exists.
+ * Cart page / Vue Router aren’t wired yet — add router.push('/cart') here later.
  */
 function buyNow(product) {
   if (!product?.stock) return;
   if (!state.cart[product.id]) {
     state.cart[product.id] = 1;
   }
+  goToCart();
+}
+
+/** Navigate to cart — wire up once a cart route exists. */
+function goToCart() {
+  // TODO: router.push({ name: 'cart' }) once a cart route exists
 }
 
 /** Add id if missing, remove if already favorited. */
@@ -201,8 +190,7 @@ function onPriceMax(value) {
       @retry="retry"
       @clear-search="clearSearch"
       @add-to-cart="addToCart"
-      @increase-cart="increaseCart"
-      @decrease-cart="decreaseCart"
+      @go-to-cart="goToCart"
       @buy-now="buyNow"
       @toggle-favorite="toggleFavorite"
       @toggle-brand="toggleBrand"
