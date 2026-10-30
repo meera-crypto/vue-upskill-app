@@ -1,0 +1,491 @@
+/* Filter sidebar, chips, and mobile drawer */
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* —— Layout: sidebar + grid —— */
+
+.product-list__layout {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.product-list__main {
+  min-width: 0;
+}
+
+.product-list__drawer-backdrop {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .product-list__layout {
+    grid-template-columns: 15.5rem minmax(0, 1fr);
+    gap: 2rem;
+    /* Keep sidebar sticky relative to the taller products column */
+    align-items: start;
+  }
+
+  .product-list__filters-toggle {
+    display: none;
+  }
+}
+
+/* —— Active chips —— */
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.filter-chips__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filter-chips__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.filter-chips__chip:hover {
+  border-color: var(--color-primary);
+}
+
+.filter-chips__remove {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--color-text-muted);
+}
+
+.filter-chips__clear {
+  padding: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+/* —— Sidebar —— */
+
+.filter-sidebar {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.filter-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-block-end: 0.35rem;
+}
+
+.filter-sidebar__title {
+  margin: 0;
+  font-size: var(--font-size-h6);
+  line-height: var(--line-height-h6);
+}
+
+.filter-sidebar__close {
+  display: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--color-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-sidebar__clear {
+  align-self: stretch;
+  width: 100%;
+  margin-block-start: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .filter-sidebar {
+    display: flex;
+    position: sticky;
+    /* Sit just under the sticky header (logo + search + categories) */
+    top: calc(var(--site-header-height, 5.5rem) + 0.75rem);
+    align-self: start;
+    z-index: 2;
+    /* No outer sidebar scrollbar — only groups like Brand keep their own scroll */
+    max-height: none;
+    overflow: visible;
+    padding-inline-end: 0.25rem;
+  }
+
+  .filter-sidebar__close {
+    display: none;
+  }
+}
+
+/*
+ * Mobile / tablet drawer — starts below sticky header (+ search on phone)
+ * so it isn’t covered by z-index:100 header. Cleared above the bottom nav.
+ */
+@media (max-width: 899px) {
+  .product-list__drawer-backdrop {
+    display: block;
+    position: fixed;
+    top: var(--site-header-height, 7.5rem);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    background: color-mix(in srgb, var(--color-black) 45%, transparent);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .filter-sidebar {
+    position: fixed;
+    top: var(--site-header-height, 7.5rem);
+    bottom: 0;
+    inset-inline-start: 0;
+    z-index: 50;
+    width: min(20rem, 88vw);
+    max-height: none;
+    overflow: auto;
+    padding: 1.25rem 1rem 2rem;
+    background: var(--color-bg);
+    box-shadow: 4px 0 24px
+      color-mix(in srgb, var(--color-black) 18%, transparent);
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+  }
+
+  .filter-sidebar--open {
+    display: flex;
+    transform: translateX(0);
+  }
+
+  .filter-sidebar__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Phone: also clear the fixed bottom Favorites / Cart / Profile bar */
+@media (max-width: 767.98px) {
+  .product-list__drawer-backdrop,
+  .filter-sidebar {
+    bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .filter-sidebar {
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* —— Filter groups (accordion / dropdown) —— */
+
+.filter-group {
+  border-block-end: 1px solid var(--color-border);
+}
+
+.filter-group__heading {
+  margin: 0;
+}
+
+.filter-group__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 0;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: start;
+  color: var(--color-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.filter-group__toggle:hover {
+  color: color-mix(in srgb, var(--color-primary) 75%, var(--color-black));
+}
+
+.filter-group__toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.filter-group__toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.filter-group__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding-inline: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--color-soft-white);
+  background: var(--color-primary);
+  border-radius: 999px;
+}
+
+.filter-group__chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform 0.2s ease;
+}
+
+.filter-group__chevron--open {
+  transform: rotate(180deg);
+}
+
+.filter-group__panel {
+  padding-block: 0 1rem;
+}
+
+.filter-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.filter-group__list--scroll {
+  max-height: 11rem;
+  overflow: auto;
+  padding-inline-end: 0.25rem;
+}
+
+.filter-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.filter-option__input {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  margin-block-start: 0.1rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.filter-option__label {
+  min-width: 0;
+}
+
+/* —— Price dual-thumb slider (one track, two ends) —— */
+
+.filter-price__values {
+  margin: 0 0 0.85rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+.filter-price__sorts {
+  margin-block-start: 1rem;
+}
+
+.filter-price__control {
+  --price-fill-left: 0%;
+  --price-fill-right: 0%;
+  position: relative;
+  height: 1.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.filter-price__track {
+  position: absolute;
+  inset-inline: 0;
+  height: 0.25rem;
+  background: var(--color-border);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.filter-price__fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--price-fill-left);
+  inset-inline-end: var(--price-fill-right);
+  background: var(--color-primary);
+  border-radius: 999px;
+}
+
+.filter-price__range {
+  position: absolute;
+  inset-inline: 0;
+  width: 100%;
+  height: 1.75rem;
+  margin: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+
+.filter-price__range::-webkit-slider-runnable-track {
+  height: 0.25rem;
+  background: transparent;
+  border: none;
+}
+
+.filter-price__range::-moz-range-track {
+  height: 0.25rem;
+  background: transparent;
+  border: none;
+}
+
+.filter-price__range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-block-start: calc((0.25rem - 1.125rem) / 2);
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-soft-white);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-black) 25%, transparent);
+  cursor: grab;
+}
+
+.filter-price__range::-moz-range-thumb {
+  pointer-events: auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-soft-white);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-black) 25%, transparent);
+  cursor: grab;
+}
+
+.filter-price__range:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+
+.filter-price__range:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
+.filter-price__range:focus-visible {
+  outline: none;
+}
+
+.filter-price__range:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.filter-price__range:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Stack max above min so the right thumb stays easy to grab when close. */
+.filter-price__range--min {
+  z-index: 2;
+}
+
+.filter-price__range--max {
+  z-index: 3;
+}
+
+/* —— Color swatches —— */
+
+.filter-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+}
+
+.filter-color {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--swatch, #ccc);
+  border: 2px solid color-mix(in srgb, var(--color-black) 18%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 35%, transparent);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.filter-color:hover {
+  transform: scale(1.08);
+}
+
+.filter-color--selected {
+  box-shadow:
+    0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-primary);
+}
+
+.filter-color:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}

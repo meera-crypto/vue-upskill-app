@@ -1,0 +1,131 @@
+/* Modern product pagination */
+
+.pagination {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-block-start: 2rem;
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--color-border);
+}
+
+/* Same summary styling with or without page controls */
+.pagination--summary-only {
+  justify-content: flex-start;
+}
+
+.pagination__summary {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.pagination__summary-strong {
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+.pagination__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.pagination__pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pagination__nav,
+.pagination__page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding-inline: 0.55rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.pagination__nav:hover:not(:disabled),
+.pagination__page:hover:not(.pagination__page--current) {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  border-color: var(--color-border);
+}
+
+.pagination__nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pagination__nav:focus-visible,
+.pagination__page:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.pagination__page--current {
+  color: var(--color-soft-white);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  cursor: default;
+}
+
+.pagination__ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 2.25rem;
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+.pagination__nav-label {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .pagination {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pagination--summary-only {
+    justify-content: flex-start;
+  }
+
+  .pagination__summary {
+    text-align: start;
+  }
+
+  .pagination__nav-label {
+    display: inline;
+  }
+
+  .pagination__nav {
+    min-width: auto;
+    padding-inline: 0.75rem;
+  }
+}

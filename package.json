@@ -1,5 +1,5 @@
 {
-  "name": "nexus-cart",
+  "name": "volar-cart",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@lucide/vue": "^1.61.0",
     "vue": "^3.5.42"
   },
   "devDependencies": {
