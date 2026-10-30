@@ -254,10 +254,13 @@
   color: var(--color-secondary);
   opacity: 0.9;
   text-decoration: none;
-  transition: opacity 0.15s ease;
+  transition:
+    
+    opacity 0.15s ease;
 }
 
 .nav-icon:hover {
+  color: var(--color-primary);
   opacity: 1;
 }
 

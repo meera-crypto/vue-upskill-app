@@ -44,10 +44,13 @@
   justify-content: center;
   color: inherit;
   opacity: 0.9;
-  transition: opacity 0.15s ease;
+  transition:
+   
+    opacity 0.15s ease;
 }
 
 .footer-social .nav-icon:hover {
+  color: var(--color-primary);
   opacity: 1;
 }
 
