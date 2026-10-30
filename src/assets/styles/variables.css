@@ -12,6 +12,7 @@
      Danger     → red         (header count badges)
   */
   --color-primary: #7b3f72;
+  --color-primary-hover: #562c50;
   --color-secondary: #25232b;
   --color-soft-white: #f8f7f4;
   --color-black: #7b7b7b;
