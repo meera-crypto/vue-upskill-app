@@ -103,8 +103,7 @@ const emit = defineEmits([
   "retry",
   "clear-search",
   "add-to-cart",
-  "increase-cart",
-  "decrease-cart",
+  "go-to-cart",
   "buy-now",
   "toggle-favorite",
   "toggle-brand",
@@ -313,8 +312,7 @@ function quantityFor(productId) {
                   :favorited="isFavorite(product.id)"
                   :quantity="quantityFor(product.id)"
                   @add-to-cart="emit('add-to-cart', $event)"
-                  @increase-cart="emit('increase-cart', $event)"
-                  @decrease-cart="emit('decrease-cart', $event)"
+                  @go-to-cart="emit('go-to-cart', $event)"
                   @buy-now="emit('buy-now', $event)"
                   @toggle-favorite="emit('toggle-favorite', $event)"
                 />

@@ -2,11 +2,14 @@
 /**
  * ProductCard — shows ONE product and talks to parents with emit.
  *
- * Mobile: horizontal row (image left, details right) + full-width Add to cart.
- * Desktop: vertical card with Add to cart / Buy now.
+ * Mobile: horizontal row (image left, details right) + full-width cart CTA.
+ * Desktop: vertical card with cart CTA / Buy now.
+ *
+ * Qty +/- lives on the product detail page later. Here, Add to cart adds the
+ * item once; the CTA then switches to “Go to cart”.
  */
 import { computed } from "vue";
-import { Minus, Plus, Heart, Star } from "@lucide/vue";
+import { Heart, Star } from "@lucide/vue";
 import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
 
 const props = defineProps({
@@ -18,6 +21,7 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /** Cart quantity from parent — used only to know if this item is already added. */
   quantity: {
     type: Number,
     default: 0,
@@ -26,11 +30,13 @@ const props = defineProps({
 
 const emit = defineEmits([
   "add-to-cart",
-  "increase-cart",
-  "decrease-cart",
+  "go-to-cart",
   "buy-now",
   "toggle-favorite",
 ]);
+
+/** True once this product is in the cart (qty comes from the parent). */
+const inCart = computed(() => props.quantity > 0);
 
 const displayName = computed(
   () => props.product.title || props.product.name || "Untitled product",
@@ -61,8 +67,6 @@ const description = computed(() => {
 });
 
 const inStock = computed(() => (props.product.stock ?? 0) > 0);
-
-const canIncrease = computed(() => props.quantity < (props.product.stock ?? 0));
 
 const showDiscount = computed(() => {
   const original = props.product.originalPrice;
@@ -110,18 +114,22 @@ function onAddToCart(product) {
   emit("add-to-cart", product);
 }
 
-function onIncrease(product) {
-  if (!canIncrease.value) return;
-  emit("increase-cart", product);
-}
-
-function onDecrease(product) {
-  emit("decrease-cart", product);
+/** Primary CTA after add — parent can navigate once a cart route exists. */
+function onGoToCart(product) {
+  emit("go-to-cart", product);
 }
 
 function onBuyNow(product) {
   if (!inStock.value) return;
   emit("buy-now", product);
+}
+
+function onCartCta(product) {
+  if (inCart.value) {
+    onGoToCart(product);
+  } else {
+    onAddToCart(product);
+  }
 }
 
 function onToggleFavorite(product) {
@@ -212,41 +220,12 @@ function onToggleFavorite(product) {
         <!-- Lives in the content column so mobile width matches details, not image -->
         <div v-if="inStock" class="product-card__actions">
           <button
-            v-if="quantity === 0"
             type="button"
             class="btn btn--primary product-card__cart"
-            @click="onAddToCart(product)"
+            @click="onCartCta(product)"
           >
-            Add to cart
+            {{ inCart ? "Go to cart" : "Add to cart" }}
           </button>
-
-          <div
-            v-else
-            class="product-card__qty"
-            role="group"
-            :aria-label="`Quantity for ${displayName}`"
-          >
-            <button
-              type="button"
-              class="product-card__qty-btn"
-              :aria-label="`Decrease quantity of ${displayName}`"
-              @click="onDecrease(product)"
-            >
-              <Minus :size="16" />
-            </button>
-            <span class="product-card__qty-value" aria-live="polite">
-              {{ quantity }}
-            </span>
-            <button
-              type="button"
-              class="product-card__qty-btn"
-              :aria-label="`Increase quantity of ${displayName}`"
-              :disabled="!canIncrease"
-              @click="onIncrease(product)"
-            >
-              <Plus :size="16" />
-            </button>
-          </div>
 
           <button
             type="button"
