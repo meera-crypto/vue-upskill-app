@@ -46,7 +46,7 @@ const {
   toggleColor,
   toggleRating,
   toggleDiscount,
-  togglePriceSort,
+  setSort,
   setPriceRange,
   removeChip,
   clearFilters,
@@ -197,7 +197,7 @@ function onPriceMax(value) {
       @toggle-color="toggleColor"
       @toggle-rating="toggleRating"
       @toggle-discount="toggleDiscount"
-      @toggle-price-sort="togglePriceSort"
+      @update:sort="setSort"
       @update:price-min="onPriceMin"
       @update:price-max="onPriceMax"
       @remove-chip="removeChip"

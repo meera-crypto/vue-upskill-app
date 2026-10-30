@@ -26,11 +26,79 @@ export const DISCOUNT_FILTER_OPTIONS = [
   { value: 15, label: "15% or more" },
 ];
 
-/** Price sort options shown as checkboxes in the Price filter group. */
-export const PRICE_SORT_OPTIONS = [
-  { value: "asc", label: "Price: Low to High" },
-  { value: "desc", label: "Price: High to Low" },
+/**
+ * Toolbar sort options (Search → Filter → Sort → Paginate).
+ * Default is Featured — see docs/product-listing-requirements.md §3.4.
+ */
+export const SORT_OPTIONS = [
+  { value: "featured", label: "Featured Products" },
+  { value: "best-selling", label: "Best Seller" },
+  { value: "newest", label: "Newest Arrival" },
+  { value: "price-asc", label: "Price: Low to High" },
+  { value: "price-desc", label: "Price: High to Low" },
 ];
+
+export const DEFAULT_SORT = "featured";
+
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {number}
+ */
+function compareNumbersDesc(a, b) {
+  return (Number(b) || 0) - (Number(a) || 0);
+}
+
+/**
+ * Apply the selected sort. Always returns a new array.
+ * @param {unknown[]} list
+ * @param {string} sort
+ */
+function sortProducts(list, sort) {
+  const sorted = [...list];
+
+  switch (sort) {
+    case "price-asc":
+      sorted.sort((a, b) => (Number(a?.price) || 0) - (Number(b?.price) || 0));
+      break;
+    case "price-desc":
+      sorted.sort((a, b) => (Number(b?.price) || 0) - (Number(a?.price) || 0));
+      break;
+    case "newest":
+      sorted.sort((a, b) => {
+        const timeA = a?.createdAt ? Date.parse(a.createdAt) : NaN;
+        const timeB = b?.createdAt ? Date.parse(b.createdAt) : NaN;
+        const hasA = Number.isFinite(timeA);
+        const hasB = Number.isFinite(timeB);
+        if (hasA && hasB && timeA !== timeB) return timeB - timeA;
+        if (hasA !== hasB) return hasA ? -1 : 1;
+        // Fallback: higher DummyJSON id ≈ newer catalog entry.
+        return (Number(b?.id) || 0) - (Number(a?.id) || 0);
+      });
+      break;
+    case "best-selling":
+      sorted.sort((a, b) => {
+        const bySales = compareNumbersDesc(a?.salesCount, b?.salesCount);
+        if (bySales !== 0) return bySales;
+        return compareNumbersDesc(a?.rating, b?.rating);
+      });
+      break;
+    case "featured":
+    default:
+      // Featured first, then higher rating, then id for a stable order.
+      sorted.sort((a, b) => {
+        const featA = a?.isFeatured ? 1 : 0;
+        const featB = b?.isFeatured ? 1 : 0;
+        if (featA !== featB) return featB - featA;
+        const byRating = compareNumbersDesc(a?.rating, b?.rating);
+        if (byRating !== 0) return byRating;
+        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+      });
+      break;
+  }
+
+  return sorted;
+}
 
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -60,10 +128,10 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     priceMin: 0,
     priceMax: 0,
     /**
-     * Price sort — only one direction at a time (null = catalog order).
-     * @type {null | 'asc' | 'desc'}
+     * Listing sort — toolbar dropdown (not a filter chip).
+     * @type {'featured' | 'best-selling' | 'newest' | 'price-asc' | 'price-desc'}
      */
-    priceSort: null,
+    sort: DEFAULT_SORT,
   });
 
   const catalogList = computed(() => {
@@ -149,7 +217,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
         })),
       ratings: RATING_FILTER_OPTIONS,
       discounts: DISCOUNT_FILTER_OPTIONS,
-      priceSorts: PRICE_SORT_OPTIONS,
+      sorts: SORT_OPTIONS,
     };
   });
 
@@ -165,14 +233,13 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       filters.colors.length > 0 ||
       filters.ratings.length > 0 ||
       filters.discounts.length > 0 ||
-      isPriceFiltered.value ||
-      filters.priceSort != null
+      isPriceFiltered.value
     );
   });
 
   /**
-   * Apply OR-within / AND-across rules, then optional price sort
-   * (Search → Filter → Sort — pagination happens next in App).
+   * Apply OR-within / AND-across rules, then sort
+   * (Search → Filter → Sort — pagination happens next in the page view).
    */
   const filteredProducts = computed(() => {
     const matched = sourceList.value.filter((product) => {
@@ -219,15 +286,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       return true;
     });
 
-    if (!filters.priceSort) return matched;
-
-    const sorted = [...matched];
-    sorted.sort((a, b) => {
-      const priceA = Number(a?.price) || 0;
-      const priceB = Number(b?.price) || 0;
-      return filters.priceSort === "asc" ? priceA - priceB : priceB - priceA;
-    });
-    return sorted;
+    return sortProducts(matched, filters.sort);
   });
 
   const activeChips = computed(() => {
@@ -292,16 +351,6 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       });
     }
 
-    if (filters.priceSort) {
-      const opt = PRICE_SORT_OPTIONS.find((o) => o.value === filters.priceSort);
-      chips.push({
-        id: `priceSort:${filters.priceSort}`,
-        group: "priceSort",
-        value: filters.priceSort,
-        label: opt?.label ?? filters.priceSort,
-      });
-    }
-
     return chips;
   });
 
@@ -358,13 +407,13 @@ export function useProductFilters(sourceProducts, catalogProducts) {
   }
 
   /**
-   * Mutual-exclusive price sort checkboxes:
-   * check one → that sort; check the same again → clear; check the other → switch.
-   * @param {'asc' | 'desc'} value
+   * Set the listing sort from the toolbar dropdown.
+   * Sorting does not clear filters or search.
+   * @param {string} value
    */
-  function togglePriceSort(value) {
-    if (value !== "asc" && value !== "desc") return;
-    filters.priceSort = filters.priceSort === value ? null : value;
+  function setSort(value) {
+    const allowed = SORT_OPTIONS.some((opt) => opt.value === value);
+    filters.sort = allowed ? value : DEFAULT_SORT;
   }
 
   function removeChip(chip) {
@@ -373,11 +422,6 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     if (chip.group === "price") {
       filters.priceMin = priceBounds.value.min;
       filters.priceMax = priceBounds.value.max;
-      return;
-    }
-
-    if (chip.group === "priceSort") {
-      filters.priceSort = null;
       return;
     }
 
@@ -395,7 +439,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     filters.discounts = [];
     filters.priceMin = priceBounds.value.min;
     filters.priceMax = priceBounds.value.max;
-    filters.priceSort = null;
+    // Sort stays as the user left it — it is not a filter.
   }
 
   return {
@@ -411,7 +455,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     toggleColor,
     toggleRating,
     toggleDiscount,
-    togglePriceSort,
+    setSort,
     setPriceRange,
     removeChip,
     clearFilters,

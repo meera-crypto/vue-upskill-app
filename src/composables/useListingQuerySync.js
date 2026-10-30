@@ -35,24 +35,38 @@ function parseNumbers(value) {
     .filter((n) => Number.isFinite(n));
 }
 
+const SORT_VALUES = new Set([
+  "featured",
+  "best-selling",
+  "newest",
+  "price-asc",
+  "price-desc",
+]);
+
 /**
  * @param {unknown} value
- * @returns {null | 'asc' | 'desc'}
+ * @returns {'featured' | 'best-selling' | 'newest' | 'price-asc' | 'price-desc'}
  */
 function parseSort(value) {
   const raw = String(value ?? "").toLowerCase();
-  if (raw === "asc" || raw === "price-asc") return "asc";
-  if (raw === "desc" || raw === "price-desc") return "desc";
-  return null;
+  // Older links used short price keys before the full sort dropdown existed.
+  if (raw === "asc") return "price-asc";
+  if (raw === "desc") return "price-desc";
+  if (SORT_VALUES.has(raw)) {
+    return /** @type {'featured' | 'best-selling' | 'newest' | 'price-asc' | 'price-desc'} */ (
+      raw
+    );
+  }
+  return "featured";
 }
 
 /**
- * @param {null | 'asc' | 'desc'} sort
+ * @param {string} sort
  * @returns {string | undefined}
  */
 function serializeSort(sort) {
-  if (sort === "asc") return "price-asc";
-  if (sort === "desc") return "price-desc";
+  if (!sort || sort === "featured") return undefined;
+  if (SORT_VALUES.has(sort)) return sort;
   return undefined;
 }
 
@@ -123,7 +137,7 @@ export function useListingQuerySync(options) {
       q.maxPrice = String(filters.priceMax);
     }
 
-    const sort = serializeSort(filters.priceSort);
+    const sort = serializeSort(filters.sort);
     if (sort) q.sort = sort;
 
     if (page.value > 1) {
@@ -147,7 +161,7 @@ export function useListingQuerySync(options) {
     filters.colors = parseList(routeQuery.color);
     filters.ratings = parseNumbers(routeQuery.rating);
     filters.discounts = parseNumbers(routeQuery.discount);
-    filters.priceSort = parseSort(routeQuery.sort);
+    filters.sort = parseSort(routeQuery.sort);
 
     const bounds = unref(priceBounds);
     const minP = Number(routeQuery.minPrice);
