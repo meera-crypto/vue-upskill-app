@@ -94,6 +94,21 @@ export function useProducts(options = {}) {
     }, debounceMs);
   }
 
+  /**
+   * Apply a search string immediately (no debounce).
+   * Used when restoring state from the URL so refresh/back match right away.
+   * @param {string} next
+   */
+  function hydrateQuery(next) {
+    if (debounceTimer != null) {
+      clearTimeout(debounceTimer);
+      debounceTimer = null;
+    }
+    const value = String(next ?? "");
+    query.value = value;
+    appliedQuery.value = value;
+  }
+
   /** Clear search and show the catalog without waiting for debounce. */
   function clearSearch() {
     if (debounceTimer != null) {
@@ -125,7 +140,10 @@ export function useProducts(options = {}) {
     loading,
     error,
     query,
+    /** Debounced value actually used for filtering (also written to the URL). */
+    appliedQuery,
     setQuery,
+    hydrateQuery,
     clearSearch,
     load,
     retry,

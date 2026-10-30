@@ -129,6 +129,10 @@
   background-color: var(--color-soft-white);
 }
 
+.header-categories__viewport {
+  position: relative;
+}
+
 .header-categories__scroll {
   display: flex;
   flex-wrap: nowrap;
@@ -140,17 +144,90 @@
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  scrollbar-width: none;
   scroll-snap-type: x proximity;
 }
 
 .header-categories__scroll::-webkit-scrollbar {
-  height: 4px;
+  display: none;
 }
 
-.header-categories__scroll::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-neutral) 55%, transparent);
+.header-categories__arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
+  background: var(--color-soft-white);
+  color: var(--color-primary);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-black) 12%, transparent);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.header-categories__arrow:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-primary) 8%, var(--color-soft-white));
+}
+
+.header-categories__arrow:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.header-categories__arrow--prev {
+  left: 0;
+}
+
+.header-categories__arrow--next {
+  right: 0;
+}
+
+/* Soft edge fades so chips don’t sit under the arrows */
+.header-categories__viewport::before,
+.header-categories__viewport::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 2.5rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.header-categories__viewport::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    var(--color-soft-white) 35%,
+    transparent
+  );
+}
+
+.header-categories__viewport::after {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    var(--color-soft-white) 35%,
+    transparent
+  );
+}
+
+.header-categories__viewport--fade-left::before,
+.header-categories__viewport--fade-right::after {
+  opacity: 1;
 }
 
 .header-categories__item {

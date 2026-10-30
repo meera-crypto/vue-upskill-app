@@ -159,6 +159,11 @@ function mapDummyProduct(raw) {
   }
 
   const image = images[0] ?? PRODUCT_IMAGE_FALLBACK;
+  /** Smaller URL when DummyJSON provides one — used in <picture> on mobile. */
+  const thumbnail =
+    typeof raw.thumbnail === "string" && raw.thumbnail.trim()
+      ? raw.thumbnail.trim()
+      : image;
   const stock = Number(raw.stock);
   const reviews = Array.isArray(raw.reviews) ? raw.reviews : [];
   const rating = typeof raw.rating === "number" ? raw.rating : null;
@@ -181,8 +186,10 @@ function mapDummyProduct(raw) {
     reviewCount: reviews.length > 0 ? reviews.length : null,
     stock: Number.isFinite(stock) && stock > 0 ? stock : 0,
     images: images.length > 0 ? images : [PRODUCT_IMAGE_FALLBACK],
-    /** Primary image for cards. */
+    /** Primary (larger) image for cards / tablet+. */
     image,
+    /** Prefer for narrow viewports via <picture> <source>. */
+    thumbnail,
     colors: extractColors(title, description),
     isFeatured: false,
   };
