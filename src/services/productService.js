@@ -159,10 +159,33 @@ function mapDummyProduct(raw) {
   }
 
   const image = images[0] ?? PRODUCT_IMAGE_FALLBACK;
+  /** Smaller URL when DummyJSON provides one — used in <picture> on mobile. */
+  const thumbnail =
+    typeof raw.thumbnail === "string" && raw.thumbnail.trim()
+      ? raw.thumbnail.trim()
+      : image;
   const stock = Number(raw.stock);
   const reviews = Array.isArray(raw.reviews) ? raw.reviews : [];
   const rating = typeof raw.rating === "number" ? raw.rating : null;
   const category = typeof raw.category === "string" ? raw.category : "";
+  const meta =
+    raw.meta && typeof raw.meta === "object"
+      ? /** @type {Record<string, unknown>} */ (raw.meta)
+      : {};
+  const createdAt =
+    typeof meta.createdAt === "string" && meta.createdAt
+      ? meta.createdAt
+      : null;
+
+  /**
+   * DummyJSON has no sales count. Use review volume as a stable
+   * popularity proxy so “Best Seller” sorting still works.
+   */
+  const salesCount = reviews.length;
+
+  /** Featured: strong rating and/or meaningful discount. */
+  const isFeatured =
+    (rating != null && rating >= 4) || safeDiscount >= 15;
 
   return {
     id: raw.id,
@@ -179,12 +202,17 @@ function mapDummyProduct(raw) {
     discountPercentage: safeDiscount,
     rating,
     reviewCount: reviews.length > 0 ? reviews.length : null,
+    /** Proxy for best-seller sort (see comment above). */
+    salesCount,
+    createdAt,
     stock: Number.isFinite(stock) && stock > 0 ? stock : 0,
     images: images.length > 0 ? images : [PRODUCT_IMAGE_FALLBACK],
-    /** Primary image for cards. */
+    /** Primary (larger) image for cards / tablet+. */
     image,
+    /** Prefer for narrow viewports via <picture> <source>. */
+    thumbnail,
     colors: extractColors(title, description),
-    isFeatured: false,
+    isFeatured,
   };
 }
 

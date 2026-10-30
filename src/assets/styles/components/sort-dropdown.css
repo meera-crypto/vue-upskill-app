@@ -1,0 +1,56 @@
+/* Sort dropdown — product listing toolbar */
+
+.sort-dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.sort-dropdown__label {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.sort-dropdown__select {
+  min-width: 11.5rem;
+  max-width: 100%;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background-color: var(--color-soft-white);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237b3f72' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+.sort-dropdown__select:hover {
+  border-color: var(--color-primary);
+}
+
+.sort-dropdown__select:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+@media (max-width: 479px) {
+  .sort-dropdown {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .sort-dropdown__select {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}

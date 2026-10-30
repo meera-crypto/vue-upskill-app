@@ -5,6 +5,9 @@
  * Mobile: horizontal row (image left, details right) + full-width cart CTA.
  * Desktop: vertical card with cart CTA / Buy now.
  *
+ * Images use <picture>: a <source> can pick a different URL by viewport
+ * (thumbnail on mobile, primary image as the <img> fallback for larger screens).
+ *
  * Qty +/- lives on the product detail page later. Here, Add to cart adds the
  * item once; the CTA then switches to “Go to cart”.
  */
@@ -103,6 +106,15 @@ const ratingLabel = computed(() => {
   return `${score} out of 5 stars`;
 });
 
+/** Image URL for narrow screens — thumbnail when the API gave a distinct one. */
+const mobileImageSrc = computed(() => {
+  const thumb =
+    typeof props.product.thumbnail === "string"
+      ? props.product.thumbnail.trim()
+      : "";
+  return thumb || props.product.image;
+});
+
 function onImageError(event) {
   if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
     event.target.src = PRODUCT_IMAGE_FALLBACK;
@@ -141,15 +153,22 @@ function onToggleFavorite(product) {
   <article class="product-card">
     <div class="product-card__main">
       <div class="product-card__media">
-        <img
-          class="product-card__image"
-          :src="product.image"
-          :alt="displayName"
-          width="150"
-          height="150"
-          loading="lazy"
-          @error="onImageError"
-        />
+        <picture class="product-card__picture">
+          <!-- Matches the card layout breakpoint: smaller file on mobile. -->
+          <source
+            media="(max-width: 767px)"
+            :srcset="mobileImageSrc"
+          />
+          <img
+            class="product-card__image"
+            :src="product.image"
+            :alt="displayName"
+            width="150"
+            height="150"
+            loading="lazy"
+            @error="onImageError"
+          />
+        </picture>
         <button
           type="button"
           class="product-card__favorite"

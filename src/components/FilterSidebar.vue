@@ -40,7 +40,6 @@ const emit = defineEmits([
   "toggle-discount",
   "update:price-min",
   "update:price-max",
-  "toggle-price-sort",
   "clear",
   "close",
 ]);
@@ -115,10 +114,9 @@ function selectedCount(key) {
       return props.filters.discounts.length;
     case "price": {
       const { min, max } = props.priceBounds;
-      const rangeActive =
-        props.filters.priceMin > min || props.filters.priceMax < max;
-      const sortActive = props.filters.priceSort != null;
-      return (rangeActive ? 1 : 0) + (sortActive ? 1 : 0);
+      return props.filters.priceMin > min || props.filters.priceMax < max
+        ? 1
+        : 0;
     }
     default:
       return 0;
@@ -214,20 +212,6 @@ function selectedCount(key) {
             @input="onPriceMaxInput"
           />
         </div>
-
-        <ul class="filter-group__list filter-price__sorts">
-          <li v-for="sort in options.priceSorts" :key="sort.value">
-            <label class="filter-option">
-              <input
-                type="checkbox"
-                class="filter-option__input"
-                :checked="filters.priceSort === sort.value"
-                @change="emit('toggle-price-sort', sort.value)"
-              />
-              <span class="filter-option__label">{{ sort.label }}</span>
-            </label>
-          </li>
-        </ul>
       </div>
     </section>
 

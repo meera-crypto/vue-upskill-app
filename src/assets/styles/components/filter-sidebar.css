@@ -339,10 +339,6 @@
   color: var(--color-secondary);
 }
 
-.filter-price__sorts {
-  margin-block-start: 1rem;
-}
-
 .filter-price__control {
   --price-fill-left: 0%;
   --price-fill-right: 0%;

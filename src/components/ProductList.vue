@@ -15,6 +15,8 @@ import ProductCard from "@/components/ProductCard.vue";
 import FilterSidebar from "@/components/FilterSidebar.vue";
 import ActiveFilterChips from "@/components/ActiveFilterChips.vue";
 import ProductPagination from "@/components/ProductPagination.vue";
+import SortDropdown from "@/components/SortDropdown.vue";
+import { SORT_OPTIONS } from "@/composables/useProductFilters.js";
 
 const props = defineProps({
   products: {
@@ -110,7 +112,7 @@ const emit = defineEmits([
   "toggle-color",
   "toggle-rating",
   "toggle-discount",
-  "toggle-price-sort",
+  "update:sort",
   "update:price-min",
   "update:price-max",
   "remove-chip",
@@ -185,22 +187,13 @@ function quantityFor(productId) {
             @clear="emit('clear-filters')"
           />
         </div>
-        <p
-          v-if="!loading && !error"
-          class="product-list__count"
-          aria-live="polite"
-        >
-          <template v-if="searchQuery.trim()">
-            {{ total }} result{{ total === 1 ? "" : "s" }} for
-            “{{ searchQuery.trim() }}”
-          </template>
-          <template v-else>
-            {{ total }} product{{ total === 1 ? "" : "s" }}
-          </template>
-          <template v-if="showPagination && total > 0 && totalPages > 1">
-            · page {{ page }} of {{ totalPages }}
-          </template>
-        </p>
+
+        <SortDropdown
+          class="product-list__sort"
+          :options="filterOptions.sorts ?? SORT_OPTIONS"
+          :model-value="filters.sort"
+          @update:model-value="emit('update:sort', $event)"
+        />
       </div>
 
       <div class="product-list__layout">
@@ -222,7 +215,6 @@ function quantityFor(productId) {
           @toggle-color="emit('toggle-color', $event)"
           @toggle-rating="emit('toggle-rating', $event)"
           @toggle-discount="emit('toggle-discount', $event)"
-          @toggle-price-sort="emit('toggle-price-sort', $event)"
           @update:price-min="emit('update:price-min', $event)"
           @update:price-max="emit('update:price-max', $event)"
           @clear="emit('clear-filters')"

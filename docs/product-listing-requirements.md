@@ -236,7 +236,7 @@ WCAG 2.2: https://www.w3.org/TR/WCAG22/
 | Variant selection | Choose color/size before adding | Medium |
 | Back-in-stock alerts | Express interest in unavailable products | Advanced |
 
-Example URL: `/products?category=electronics&brand=soundmax&minPrice=50&maxPrice=100&sort=price-asc&page=2`. When URL synchronization is implemented, restore the same search, filters, sort, and page after refresh.
+Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=100&sort=price-asc&page=2` (also accepts `/products?…`). Implemented via Vue Router + `useListingQuerySync`: search, filters, sort, and page restore after refresh and stay shareable/bookmarkable.
 
 ## 8. Edge Cases and Business Rules
 
