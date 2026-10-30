@@ -11,14 +11,16 @@
      Pink       → rose        (favorites heart)
      Danger     → red         (header count badges)
   */
-  --color-primary: #1a2b4a;
-  --color-secondary: #059669;
+  --color-primary: #7b3f72;
+  --color-secondary: #25232b;
   --color-soft-white: #f8f7f4;
-  --color-black: #000000;
+  --color-black: #7b7b7b;
   --color-tertiary: var(--color-soft-white);
   --color-neutral: #a89f9a;
+  --color-cool-blue: #f0f2f7;
   --color-pink: #c2185b;
   --color-danger: #e53935;
+  --color-border: #ebe3df;
 
   --color-text: var(--color-primary);
   --color-text-muted: var(--color-neutral);

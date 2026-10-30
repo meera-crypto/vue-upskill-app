@@ -1,0 +1,14 @@
+---
+description: Project requirements and implementation guidance for the Vue 3 e-commerce product listing page
+alwaysApply: true
+---
+
+# Product Listing Project Guidance
+
+Before planning or changing the e-commerce product listing page, read and follow [`docs/product-listing-requirements.md`](../../docs/product-listing-requirements.md).
+
+Use that document as the source of truth for functional behavior, UX, accessibility, performance, data handling, edge cases, and acceptance criteria. Keep search, filters, sorting, and pagination consistent with one another.
+
+When a request leaves a product decision open, follow the document's recommended initial scope and preserve existing project conventions. If a requested change conflicts with a requirement or requires a business rule the document does not define, explain the conflict or ask for the missing decision before implementing that behavior.
+
+When the user agrees to change a requirement or business rule, update `docs/product-listing-requirements.md` so the guidance remains current.

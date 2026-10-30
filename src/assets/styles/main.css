@@ -7,6 +7,9 @@
 @import './button.css';
 
 @import './components/header.css';
+@import './components/hero.css';
 @import './components/footer.css';
 @import './components/product-list.css';
+@import './components/filter-sidebar.css';
+@import './components/pagination.css';
 @import './components/product-card.css';
