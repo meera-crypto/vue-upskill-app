@@ -19,6 +19,7 @@ import { useProductFilters } from "@/composables/useProductFilters.js";
 import { usePagination } from "@/composables/usePagination.js";
 import { useListingQuerySync } from "@/composables/useListingQuerySync.js";
 import { useMediaQuery } from "@/composables/useMediaQuery.js";
+import { useToast } from "@/composables/useToast.js";
 
 const {
   catalog,
@@ -106,15 +107,24 @@ const state = reactive({
   favoriteIds: [],
 });
 
+/** Shared toast helpers — ToastContainer in App.vue renders the queue. */
+const toast = useToast();
+
 /** Total items in cart (sum of quantities). */
 const cartCount = computed(() =>
   Object.values(state.cart).reduce((sum, qty) => sum + qty, 0),
 );
 
+/** Friendly label for toast copy (title with a safe fallback). */
+function productLabel(product) {
+  return product?.title?.trim() || "Item";
+}
+
 /** First add: set quantity to 1 (only when in stock). Qty +/- comes later on the product page. */
 function addToCart(product) {
   if (!product?.stock) return;
   state.cart[product.id] = 1;
+  toast.success(`${productLabel(product)} added to cart`);
 }
 
 /**
@@ -125,6 +135,7 @@ function buyNow(product) {
   if (!product?.stock) return;
   if (!state.cart[product.id]) {
     state.cart[product.id] = 1;
+    toast.success(`${productLabel(product)} added to cart`);
   }
   goToCart();
 }
@@ -139,8 +150,10 @@ function toggleFavorite(product) {
   const index = state.favoriteIds.indexOf(product.id);
   if (index === -1) {
     state.favoriteIds.push(product.id);
+    toast.info(`${productLabel(product)} added to favorites`);
   } else {
     state.favoriteIds.splice(index, 1);
+    toast.info(`${productLabel(product)} removed from favorites`);
   }
 }
 
