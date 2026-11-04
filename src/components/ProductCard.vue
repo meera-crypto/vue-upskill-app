@@ -2,18 +2,23 @@
 /**
  * ProductCard — shows ONE product and talks to parents with emit.
  *
- * Mobile: horizontal row (image left, details right) + full-width cart CTA.
- * Desktop: vertical card with cart CTA / Buy now.
+ * Base (< md): horizontal row + full-width cart CTA.
+ * md+: vertical card with cart CTA / Buy now.
  *
- * Images use <picture>: a <source> can pick a different URL by viewport
- * (thumbnail on mobile, primary image as the <img> fallback for larger screens).
+ * Images use <picture>: a <source> picks a smaller URL below md
+ * (thumbnail on mobile; primary image as the <img> fallback for md+).
  *
  * Qty +/- lives on the product detail page later. Here, Add to cart adds the
  * item once; the CTA then switches to “Go to cart”.
+ * Out of stock: full-width tertiary “See All Options” instead of cart CTAs.
  */
 import { computed } from "vue";
 import { Heart, Star } from "@lucide/vue";
-import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
+import {
+  PRODUCT_IMAGE_FALLBACK,
+  hasValidDiscount,
+} from "@/services/productService.js";
+import { mediaQueries } from "@/constants/breakpoints.js";
 
 const props = defineProps({
   product: {
@@ -36,6 +41,7 @@ const emit = defineEmits([
   "go-to-cart",
   "buy-now",
   "toggle-favorite",
+  "see-all-options",
 ]);
 
 /** True once this product is in the cart (qty comes from the parent). */
@@ -71,26 +77,18 @@ const description = computed(() => {
 
 const inStock = computed(() => (props.product.stock ?? 0) > 0);
 
-const showDiscount = computed(() => {
-  const original = props.product.originalPrice;
-  return (
-    typeof original === "number" &&
-    original > props.product.price &&
-    props.product.price >= 0
-  );
-});
+/** Strike-through + % off only for a valid discount (never misleading). */
+const showDiscount = computed(() => hasValidDiscount(props.product));
 
 /** Low stock hint only — never show the exact count. */
 const fewLeft = computed(
   () => inStock.value && (props.product.stock ?? 0) < 30,
 );
 
-/** Rounded % off from DummyJSON (only when a valid discount is shown). */
+/** Rounded % off — only when showDiscount is true. */
 const discountPercentLabel = computed(() => {
   if (!showDiscount.value) return "";
-  const percent = Number(props.product.discountPercentage);
-  if (!Number.isFinite(percent) || percent <= 0) return "";
-  return `${Math.round(percent)}% off`;
+  return `${Math.round(Number(props.product.discountPercentage))}% off`;
 });
 
 /** Only show rating when the API gave us a real number — never invent stars. */
@@ -147,6 +145,11 @@ function onCartCta(product) {
 function onToggleFavorite(product) {
   emit("toggle-favorite", product);
 }
+
+/** Placeholder for product options / detail — no detail route yet. */
+function onSeeAllOptions(product) {
+  emit("see-all-options", product);
+}
 </script>
 
 <template>
@@ -154,9 +157,9 @@ function onToggleFavorite(product) {
     <div class="product-card__main">
       <div class="product-card__media">
         <picture class="product-card__picture">
-          <!-- Matches the card layout breakpoint: smaller file on mobile. -->
+          <!-- untilMd: smaller file below the md layout step. -->
           <source
-            media="(max-width: 767px)"
+            :media="mediaQueries.untilMd"
             :srcset="mobileImageSrc"
           />
           <img
@@ -237,21 +240,35 @@ function onToggleFavorite(product) {
         </div>
 
         <!-- Lives in the content column so mobile width matches details, not image -->
-        <div v-if="inStock" class="product-card__actions">
-          <button
-            type="button"
-            class="btn btn--primary product-card__cart"
-            @click="onCartCta(product)"
-          >
-            {{ inCart ? "Go to cart" : "Add to cart" }}
-          </button>
+        <div
+          class="product-card__actions"
+          :class="{ 'product-card__actions--oos': !inStock }"
+        >
+          <template v-if="inStock">
+            <button
+              type="button"
+              class="btn btn--primary product-card__cart"
+              @click="onCartCta(product)"
+            >
+              {{ inCart ? "Go to cart" : "Add to cart" }}
+            </button>
+
+            <button
+              type="button"
+              class="btn btn--tertiary product-card__buy"
+              @click="onBuyNow(product)"
+            >
+              Buy now
+            </button>
+          </template>
 
           <button
+            v-else
             type="button"
-            class="btn btn--tertiary product-card__buy"
-            @click="onBuyNow(product)"
+            class="btn btn--tertiary product-card__options"
+            @click="onSeeAllOptions(product)"
           >
-            Buy now
+            See All Options
           </button>
         </div>
       </div>

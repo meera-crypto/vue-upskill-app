@@ -9,16 +9,18 @@
  * Vue concepts: composables return reactive state; this view wires them together
  * and passes data down as props / listens for emits up.
  */
-import { reactive, computed, watch, nextTick } from "vue";
-import Header from "@/components/Header.vue";
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import Hero from "@/components/Hero.vue";
-import Footer from "@/components/Footer.vue";
 import ProductList from "@/components/ProductList.vue";
 import { useProducts } from "@/composables/useProducts.js";
 import { useProductFilters } from "@/composables/useProductFilters.js";
 import { usePagination } from "@/composables/usePagination.js";
 import { useListingQuerySync } from "@/composables/useListingQuerySync.js";
-import { useMediaQuery } from "@/composables/useMediaQuery.js";
+import { useToast } from "@/composables/useToast.js";
+import { useCart } from "@/composables/useCart.js";
+import { useFavorites } from "@/composables/useFavorites.js";
+import { mediaQueries } from "@/constants/breakpoints.js";
 
 const {
   catalog,
@@ -27,7 +29,6 @@ const {
   error,
   query,
   appliedQuery,
-  setQuery,
   hydrateQuery,
   clearSearch,
   retry,
@@ -41,11 +42,11 @@ const {
   activeChips,
   hasActiveFilters,
   isPriceFiltered,
-  toggleCategory,
   toggleBrand,
   toggleColor,
   toggleRating,
   toggleDiscount,
+  toggleInStock,
   setSort,
   setPriceRange,
   removeChip,
@@ -77,10 +78,29 @@ useListingQuerySync({
 });
 
 /**
- * Mobile (&lt;768px): 2-column grid, no pagination — show the full filtered list.
- * Tablet/desktop: keep 12-per-page pagination.
+ * Below md (<768px): no pagination — show the full filtered list.
+ * md+: keep 12-per-page pagination.
+ *
+ * Uses shared `mediaQueries.untilMd` so JS matches CSS breakpoints.
+ * A `ref` + matchMedia so Vue can change *data*, not just CSS layout.
  */
-const isMobile = useMediaQuery("(max-width: 767px)");
+const isMobile = ref(false);
+/** @type {MediaQueryList | null} */
+let mobileMediaQuery = null;
+
+function syncIsMobile() {
+  isMobile.value = mobileMediaQuery?.matches ?? false;
+}
+
+onMounted(() => {
+  mobileMediaQuery = window.matchMedia(mediaQueries.untilMd);
+  syncIsMobile();
+  mobileMediaQuery.addEventListener("change", syncIsMobile);
+});
+
+onUnmounted(() => {
+  mobileMediaQuery?.removeEventListener("change", syncIsMobile);
+});
 
 const displayedProducts = computed(() =>
   isMobile.value ? filteredProducts.value : paginatedItems.value,
@@ -99,48 +119,51 @@ watch(page, async (nextPage, prevPage) => {
   });
 });
 
-const state = reactive({
-  /** productId → how many of that product are in the cart */
-  cart: {},
-  /** Product ids marked as favorite (unique). */
-  favoriteIds: [],
-});
+/**
+ * Cart + favorites live in shared composables (module-scoped refs), so the
+ * header badges and /cart + /favorites pages stay in sync with this listing.
+ */
+const router = useRouter();
+const toast = useToast();
+const {
+  cartQuantities,
+  addToCart: putInCart,
+  buyNow: putInCartForCheckout,
+} = useCart();
+const { favoriteIds, toggleFavorite: toggleFavoriteId } = useFavorites();
 
-/** Total items in cart (sum of quantities). */
-const cartCount = computed(() =>
-  Object.values(state.cart).reduce((sum, qty) => sum + qty, 0),
-);
-
-/** First add: set quantity to 1 (only when in stock). Qty +/- comes later on the product page. */
-function addToCart(product) {
-  if (!product?.stock) return;
-  state.cart[product.id] = 1;
+/** Friendly label for toast copy (title with a safe fallback). */
+function productLabel(product) {
+  return product?.title?.trim() || "Item";
 }
 
-/**
- * Buy now: put the product in the cart (if it isn’t already), then go to cart.
- * Cart page / Vue Router aren’t wired yet — add router.push('/cart') here later.
- */
+/** First add: quantity 1 when in stock. Qty +/- is on the cart page. */
+function addToCart(product) {
+  if (putInCart(product)) {
+    toast.success(`${productLabel(product)} added to cart`);
+  }
+}
+
+/** Buy now: ensure item is in the cart, then open /cart. */
 function buyNow(product) {
-  if (!product?.stock) return;
-  if (!state.cart[product.id]) {
-    state.cart[product.id] = 1;
+  const wasNew = !cartQuantities.value[product.id];
+  if (!putInCartForCheckout(product)) return;
+  if (wasNew) {
+    toast.success(`${productLabel(product)} added to cart`);
   }
   goToCart();
 }
 
-/** Navigate to cart — wire up once a cart route exists. */
 function goToCart() {
-  // TODO: router.push({ name: 'cart' }) once a cart route exists
+  router.push({ name: "cart" });
 }
 
-/** Add id if missing, remove if already favorited. */
 function toggleFavorite(product) {
-  const index = state.favoriteIds.indexOf(product.id);
-  if (index === -1) {
-    state.favoriteIds.push(product.id);
-  } else {
-    state.favoriteIds.splice(index, 1);
+  const result = toggleFavoriteId(product);
+  if (result === "added") {
+    toast.info(`${productLabel(product)} added to favorites`);
+  } else if (result === "removed") {
+    toast.info(`${productLabel(product)} removed from favorites`);
   }
 }
 
@@ -154,16 +177,7 @@ function onPriceMax(value) {
 </script>
 
 <template>
-  <Header
-    :cart-count="cartCount"
-    :favorite-count="state.favoriteIds.length"
-    :search-query="query"
-    :categories="filterOptions.categories"
-    :selected-categories="filters.categories"
-    @update:search-query="setQuery"
-    @clear-search="clearSearch"
-    @toggle-category="toggleCategory"
-  />
+  <!-- Header is in App.vue — shared across listing, cart, and favorites. -->
   <Hero />
 
   <main>
@@ -174,8 +188,8 @@ function onPriceMax(value) {
       :search-query="query"
       :loading="loading"
       :error="error"
-      :cart="state.cart"
-      :favorites="state.favoriteIds"
+      :cart="cartQuantities"
+      :favorites="favoriteIds"
       :filters="filters"
       :filter-options="filterOptions"
       :price-bounds="priceBounds"
@@ -197,6 +211,7 @@ function onPriceMax(value) {
       @toggle-color="toggleColor"
       @toggle-rating="toggleRating"
       @toggle-discount="toggleDiscount"
+      @toggle-in-stock="toggleInStock"
       @update:sort="setSort"
       @update:price-min="onPriceMin"
       @update:price-max="onPriceMax"
@@ -207,5 +222,4 @@ function onPriceMax(value) {
       @go-to-page="goToPage"
     />
   </main>
-  <Footer />
 </template>

@@ -1,9 +1,9 @@
 <script setup>
 /**
- * ProductPagination — modern page control under the product grid.
+ * ProductPagination — page controls under the product grid.
  *
- * Always uses the same “Showing X–Y of Z” summary layout.
- * Page controls only appear when there is more than one page.
+ * Result count (“Showing X–Y of Z”) lives in ProductList’s toolbar next to
+ * the sort dropdown. This component only renders Prev / page numbers / Next.
  */
 import { ChevronLeft, ChevronRight } from "@lucide/vue";
 
@@ -14,14 +14,6 @@ defineProps({
   },
   totalPages: {
     type: Number,
-    required: true,
-  },
-  total: {
-    type: Number,
-    required: true,
-  },
-  range: {
-    type: Object,
     required: true,
   },
   pageItems: {
@@ -42,22 +34,8 @@ const emit = defineEmits(["prev", "next", "go-to-page"]);
 </script>
 
 <template>
-  <nav
-    v-if="total > 0"
-    class="pagination"
-    :class="{ 'pagination--summary-only': totalPages <= 1 }"
-    aria-label="Product pagination"
-  >
-    <p class="pagination__summary" aria-live="polite">
-      Showing
-      <span class="pagination__summary-strong"
-        >{{ range.start }}–{{ range.end }}</span
-      >
-      of
-      <span class="pagination__summary-strong">{{ total }}</span>
-    </p>
-
-    <div v-if="totalPages > 1" class="pagination__controls">
+  <nav class="pagination" aria-label="Product pagination">
+    <div class="pagination__controls">
       <button
         type="button"
         class="pagination__nav"

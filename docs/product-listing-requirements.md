@@ -37,17 +37,17 @@ Recommended page sections, from top to bottom:
 
 ### 3.1 Product Cards
 
-| Element | Requirement | UX guidance |
-| --- | --- | --- |
-| Product image | Show primary image; use fallback if unavailable. | Consistent aspect ratio; avoid layout shift. |
-| Name and brand | Show readable name and brand where relevant. | Keep text hierarchy clear; link to details. |
-| Price | Show current price and currency. | Make price easy to scan. |
-| Original price/discount | Show only for valid discounts. | Avoid misleading savings claims. |
-| Rating/reviews | Show only when data exists. | Include review count where available. |
-| Availability | Indicate in-stock/out-of-stock state. | Disable or replace Add to Cart when unavailable. |
-| Wishlist | Toggle saved state. | Use a clear label/state and accessible button name. |
-| Add to Cart | Add eligible item and update cart count. | Show success/error feedback. |
-| Quick View/variants | Optional modal and variant selection. | Validate variant before adding to cart. |
+| Element                 | Requirement                                      | UX guidance                                         |
+| ----------------------- | ------------------------------------------------ | --------------------------------------------------- |
+| Product image           | Show primary image; use fallback if unavailable. | Consistent aspect ratio; avoid layout shift.        |
+| Name and brand          | Show readable name and brand where relevant.     | Keep text hierarchy clear; link to details.         |
+| Price                   | Show current price and currency.                 | Make price easy to scan.                            |
+| Original price/discount | Show only for valid discounts.                   | Avoid misleading savings claims.                    |
+| Rating/reviews          | Show only when data exists.                      | Include review count where available.               |
+| Availability            | Indicate in-stock/out-of-stock state.            | Disable or replace Add to Cart when unavailable.    |
+| Wishlist                | Toggle saved state.                              | Use a clear label/state and accessible button name. |
+| Add to Cart             | Add eligible item and update cart count.         | Show success/error feedback.                        |
+| Quick View/variants     | Optional modal and variant selection.            | Validate variant before adding to cart.             |
 
 ### 3.2 Search
 
@@ -61,15 +61,15 @@ Recommended page sections, from top to bottom:
 
 ### 3.3 Filters
 
-| Filter | Suggested control | Example |
-| --- | --- | --- |
-| Category | Horizontal strip under header search (not in sidebar); single-select | Beauty, Laptops — text on mobile; icon + text on desktop |
-| Price | Range slider + Low/High sort checkboxes | ₹1,000–₹10,000; Price: Low to High |
-| Brand | Checkboxes | SoundMax, AudioPro |
-| Rating | Radio/checkbox options | 4 stars and above |
-| Availability | Checkbox | In stock |
-| Color / Size | Swatches / buttons | Black, White / S, M, L |
-| Discount / Attributes | Checkboxes or dynamic controls | On sale, connectivity |
+| Filter                | Suggested control                                                    | Example                                                  |
+| --------------------- | -------------------------------------------------------------------- | -------------------------------------------------------- |
+| Category              | Horizontal strip under header search (not in sidebar); single-select | Beauty, Laptops — text on mobile; icon + text on desktop |
+| Price                 | Range slider + Low/High sort checkboxes                              | ₹1,000–₹10,000; Price: Low to High                       |
+| Brand                 | Checkboxes                                                           | SoundMax, AudioPro                                       |
+| Rating                | Radio/checkbox options                                               | 4 stars and above                                        |
+| Availability          | Checkbox                                                             | In stock                                                 |
+| Color / Size          | Swatches / buttons                                                   | Black, White / S, M, L                                   |
+| Discount / Attributes | Checkboxes or dynamic controls                                       | On sale, connectivity                                    |
 
 - Support multiple selected values within a filter group.
 - Use OR logic within the same group where appropriate (e.g., Brand A OR Brand B).
@@ -81,15 +81,15 @@ Recommended page sections, from top to bottom:
 
 ### 3.4 Sorting
 
-| Option | Expected behavior |
-| --- | --- |
-| Featured | Use a defined featured-first order and predictable fallback. |
-| Price: Low to High | Sort by ascending current price. |
-| Price: High to Low | Sort by descending current price. |
-| Newest | Sort by publication/creation date where available. |
-| Customer Rating | Sort by rating; define behavior for unrated products. |
-| Best Selling | Use sales count if available. |
-| Biggest Discount | Sort by discount percentage, not raw savings amount. |
+| Option             | Expected behavior                                            |
+| ------------------ | ------------------------------------------------------------ |
+| Featured           | Use a defined featured-first order and predictable fallback. |
+| Price: Low to High | Sort by ascending current price.                             |
+| Price: High to Low | Sort by descending current price.                            |
+| Newest             | Sort by publication/creation date where available.           |
+| Customer Rating    | Sort by rating; define behavior for unrated products.        |
+| Best Selling       | Use sales count if available.                                |
+| Biggest Discount   | Sort by discount percentage, not raw savings amount.         |
 
 Sorting must not clear filters or search. Changing filters/search should reset pagination to a valid first page.
 
@@ -165,14 +165,14 @@ src/
  └── App.vue
 ```
 
-| Layer | Responsibility |
-| --- | --- |
-| View | Coordinates page-level state and layout. |
-| Components | Render UI and emit user actions. |
-| Composables | Encapsulate reusable reactive logic. |
-| Services | Fetch data and isolate API details. |
-| Stores | Share cart/wishlist state when complexity warrants it. |
-| Router | Handle product navigation and URL query parameters. |
+| Layer       | Responsibility                                         |
+| ----------- | ------------------------------------------------------ |
+| View        | Coordinates page-level state and layout.               |
+| Components  | Render UI and emit user actions.                       |
+| Composables | Encapsulate reusable reactive logic.                   |
+| Services    | Fetch data and isolate API details.                    |
+| Stores      | Share cart/wishlist state when complexity warrants it. |
+| Router      | Handle product navigation and URL query parameters.    |
 
 ### Vue concepts to practise
 
@@ -194,9 +194,10 @@ Vue guide: https://vuejs.org/guide/introduction.html
 
 - Make category, result count, product name, price, and primary action easy to identify.
 - Use consistent image ratios and reserve image space to avoid layout shifts.
-- Desktop: sidebar filters and a three- or four-column grid depending on width.
-- Tablet: two or three columns and compact controls.
-- Mobile: one or two columns, touch-friendly controls, and a filter drawer/bottom sheet.
+- Use a shared mobile-first breakpoint scale (`md` / `lg` / `xl`). See below.
+- Desktop (lg+): sticky sidebar filters; three-column grid (four from xl).
+- Tablet (md): two-column grid and compact controls; filter drawer until lg.
+- Mobile (below md): one-column list cards, touch-friendly controls, filter drawer, bottom nav.
 - Do not rely on hover-only interactions; mobile users need visible, accessible controls.
 - Avoid horizontal overflow and keep product names/prices readable.
 
@@ -223,46 +224,46 @@ WCAG 2.2: https://www.w3.org/TR/WCAG22/
 
 ## 7. Optional / Advanced Features
 
-| Feature | Benefit | Priority |
-| --- | --- | --- |
-| URL-synced filters | Shareable/bookmarkable listing state | High |
-| Skeleton loading | Improves perceived loading experience | High |
-| Persistent cart | Retains cart after refresh | High |
-| Toast notifications | Confirms actions and explains errors | High |
-| Wishlist | Save products for later | Medium |
-| Quick View | Preview without leaving listing | Medium |
-| Product comparison | Compare specifications | Medium |
-| Recently viewed | Return to previously explored products | Medium |
-| Variant selection | Choose color/size before adding | Medium |
+| Feature              | Benefit                                  | Priority |
+| -------------------- | ---------------------------------------- | -------- |
+| URL-synced filters   | Shareable/bookmarkable listing state     | High     |
+| Skeleton loading     | Improves perceived loading experience    | High     |
+| Persistent cart      | Retains cart after refresh               | High     |
+| Toast notifications  | Confirms actions and explains errors     | High     |
+| Wishlist             | Save products for later                  | Medium   |
+| Quick View           | Preview without leaving listing          | Medium   |
+| Product comparison   | Compare specifications                   | Medium   |
+| Recently viewed      | Return to previously explored products   | Medium   |
+| Variant selection    | Choose color/size before adding          | Medium   |
 | Back-in-stock alerts | Express interest in unavailable products | Advanced |
 
-Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=100&sort=price-asc&page=2` (also accepts `/products?…`). Implemented via Vue Router + `useListingQuerySync`: search, filters, sort, and page restore after refresh and stay shareable/bookmarkable.
+Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=100&inStock=1&sort=price-asc&page=2` (also accepts `/products?…`). Implemented via Vue Router + `useListingQuerySync`: search, filters (including Availability → In stock), sort, and page restore after refresh and stay shareable/bookmarkable.
 
 ## 8. Edge Cases and Business Rules
 
-| Scenario | Expected behavior |
-| --- | --- |
-| No products / no matches | Show a useful empty state and reset option. |
-| API failure | Show error and Retry action. |
-| Missing image | Use a fallback image. |
-| No rating/reviews | Hide the rating or show an unavailable state; do not invent data. |
-| Out of stock | Disable or replace Add to Cart. |
-| Invalid discount | Do not show negative or misleading savings. |
-| Filters changed on a later page | Reset to a valid page, normally page 1. |
-| Rapid search changes | Prevent stale responses from overwriting current results. |
-| Repeated Add to Cart | Apply a defined quantity/update rule. |
-| Zero price | Display 0 correctly; do not treat it as missing. |
-| Variants required | Validate selected variant before adding to cart. |
-| Refresh | Restore URL state and persisted cart if implemented. |
+| Scenario                        | Expected behavior                                                 |
+| ------------------------------- | ----------------------------------------------------------------- |
+| No products / no matches        | Show a useful empty state and reset option.                       |
+| API failure                     | Show error and Retry action.                                      |
+| Missing image                   | Use a fallback image.                                             |
+| No rating/reviews               | Hide the rating or show an unavailable state; do not invent data. |
+| Out of stock                    | Disable or replace Add to Cart.                                   |
+| Invalid discount                | Do not show negative or misleading savings.                       |
+| Filters changed on a later page | Reset to a valid page, normally page 1.                           |
+| Rapid search changes            | Prevent stale responses from overwriting current results.         |
+| Repeated Add to Cart            | Apply a defined quantity/update rule.                             |
+| Zero price                      | Display 0 correctly; do not treat it as missing.                  |
+| Variants required               | Validate selected variant before adding to cart.                  |
+| Refresh                         | Restore URL state and persisted cart if implemented.              |
 
 ## 9. Implementation Phases
 
-| Phase | Scope | Deliverable |
-| --- | --- | --- |
-| 1. Foundation | Vue setup, API fetch, grid/cards, loading/error/empty states, responsive layout. | Products render reliably from API. |
-| 2. Discovery | Search, filters, sorting, active chips, clear all, pagination. | Search and listing controls work together. |
-| 3. Shopping | Cart, quantity updates, wishlist, feedback, optional Quick View. | Simulated shopping interactions. |
-| 4. Quality | URL state, mobile drawer, cancellation, accessibility, edge cases, tests. | Robust and maintainable listing page. |
+| Phase         | Scope                                                                            | Deliverable                                |
+| ------------- | -------------------------------------------------------------------------------- | ------------------------------------------ |
+| 1. Foundation | Vue setup, API fetch, grid/cards, loading/error/empty states, responsive layout. | Products render reliably from API.         |
+| 2. Discovery  | Search, filters, sorting, active chips, clear all, pagination.                   | Search and listing controls work together. |
+| 3. Shopping   | Cart, quantity updates, wishlist, feedback, optional Quick View.                 | Simulated shopping interactions.           |
+| 4. Quality    | URL state, mobile drawer, cancellation, accessibility, edge cases, tests.        | Robust and maintainable listing page.      |
 
 ## 10. Acceptance Criteria / QA Checklist
 

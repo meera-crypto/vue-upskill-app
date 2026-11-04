@@ -33,6 +33,28 @@ function slugify(title) {
 }
 
 /**
+ * True only for a real, displayable discount (requirements: no misleading savings).
+ * - percent must be finite, > 0, < 100
+ * - rounded label must be at least 1% (avoids “0% off”)
+ * - original price must be a number higher than the sale price
+ *
+ * @param {{ price?: unknown, originalPrice?: unknown, discountPercentage?: unknown }} product
+ * @returns {boolean}
+ */
+export function hasValidDiscount(product) {
+  const price = Number(product?.price);
+  const original = Number(product?.originalPrice);
+  const percent = Number(product?.discountPercentage);
+
+  if (!Number.isFinite(price) || price < 0) return false;
+  if (!Number.isFinite(percent) || percent <= 0 || percent >= 100) return false;
+  if (Math.round(percent) < 1) return false;
+  if (!Number.isFinite(original) || original <= price) return false;
+
+  return true;
+}
+
+/**
  * DummyJSON's `price` is the current (sale) price.
  * Rebuild original price from discountPercentage when the discount is valid.
  * @param {number} price
@@ -47,8 +69,23 @@ function originalPriceFromDiscount(price, discountPercentage) {
   if (!Number.isFinite(discount) || discount <= 0 || discount >= 100) {
     return null;
   }
+  if (Math.round(discount) < 1) return null;
 
   return Number((current / (1 - discount / 100)).toFixed(2));
+}
+
+/**
+ * Normalize API discount % — 0 means “no discount to show”.
+ * @param {unknown} discountPercentage
+ * @returns {number}
+ */
+function sanitizeDiscountPercentage(discountPercentage) {
+  const discount = Number(discountPercentage);
+  if (!Number.isFinite(discount) || discount <= 0 || discount >= 100) {
+    return 0;
+  }
+  if (Math.round(discount) < 1) return 0;
+  return discount;
 }
 
 /**
@@ -140,11 +177,11 @@ function mapDummyProduct(raw) {
 
   const price = Number(raw.price);
   const safePrice = Number.isFinite(price) && price >= 0 ? price : 0;
-  const discountPercentage = Number(raw.discountPercentage);
-  const safeDiscount =
-    Number.isFinite(discountPercentage) && discountPercentage > 0
-      ? discountPercentage
-      : 0;
+  const safeDiscount = sanitizeDiscountPercentage(raw.discountPercentage);
+  const originalPrice = originalPriceFromDiscount(safePrice, safeDiscount);
+  /** Drop % if we couldn’t derive a higher original price. */
+  const displayDiscount =
+    originalPrice != null && originalPrice > safePrice ? safeDiscount : 0;
 
   const images = Array.isArray(raw.images)
     ? raw.images.filter((url) => typeof url === "string" && url.length > 0)
@@ -178,14 +215,14 @@ function mapDummyProduct(raw) {
       : null;
 
   /**
-   * DummyJSON has no sales count. Use review volume as a stable
-   * popularity proxy so “Best Seller” sorting still works.
+   * DummyJSON has no dedicated sales field. Map review volume onto
+   * `salesCount` so Best Seller can sort by that field (requirements §3.4).
    */
   const salesCount = reviews.length;
 
   /** Featured: strong rating and/or meaningful discount. */
   const isFeatured =
-    (rating != null && rating >= 4) || safeDiscount >= 15;
+    (rating != null && rating >= 4) || displayDiscount >= 15;
 
   return {
     id: raw.id,
@@ -198,11 +235,11 @@ function mapDummyProduct(raw) {
     categoryLabel: formatCategoryLabel(category),
     description,
     price: safePrice,
-    originalPrice: originalPriceFromDiscount(safePrice, safeDiscount),
-    discountPercentage: safeDiscount,
+    originalPrice: displayDiscount > 0 ? originalPrice : null,
+    discountPercentage: displayDiscount,
     rating,
     reviewCount: reviews.length > 0 ? reviews.length : null,
-    /** Proxy for best-seller sort (see comment above). */
+    /** Used by Best Seller sort (DummyJSON proxy — see comment above). */
     salesCount,
     createdAt,
     stock: Number.isFinite(stock) && stock > 0 ? stock : 0,

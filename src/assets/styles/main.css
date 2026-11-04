@@ -1,16 +1,19 @@
 /* App stylesheet entry — import order matters (tokens → base → type → layout → components) */
 
-@import './variables.css';
-@import './base.css';
-@import './typography.css';
-@import './layout.css';
-@import './button.css';
+@import "./variables.css";
+@import "./base.css";
+@import "./typography.css";
+@import "./layout.css";
+@import "./button.css";
 
-@import './components/header.css';
-@import './components/hero.css';
-@import './components/footer.css';
-@import './components/product-list.css';
-@import './components/sort-dropdown.css';
-@import './components/filter-sidebar.css';
-@import './components/pagination.css';
-@import './components/product-card.css';
+@import "./components/header.css";
+@import "./components/hero.css";
+@import "./components/footer.css";
+@import "./components/product-list.css";
+@import "./components/sort-dropdown.css";
+@import "./components/filter-sidebar.css";
+@import "./components/pagination.css";
+@import "./components/product-card.css";
+@import "./components/toast.css";
+@import "./components/cart-page.css";
+@import "./components/favorites-page.css";

@@ -4,23 +4,26 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .sort-dropdown__label {
+  /* Base: hide label so count + select stay on one row; select keeps accessible name via id */
+  display: none;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .sort-dropdown__select {
-  min-width: 11.5rem;
+  min-width: 0;
   max-width: 100%;
   padding: 0.5rem 2rem 0.5rem 0.75rem;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-primary);
   background-color: var(--color-soft-white);
@@ -43,14 +46,13 @@
   outline-offset: 2px;
 }
 
-@media (max-width: 479px) {
-  .sort-dropdown {
-    width: 100%;
-    justify-content: flex-end;
+/* md (768px) — tablet+: show label + slightly wider control */
+@media (min-width: 768px) {
+  .sort-dropdown__label {
+    display: inline;
   }
 
   .sort-dropdown__select {
-    flex: 1 1 auto;
-    min-width: 0;
+    width: 11.5rem;
   }
 }
