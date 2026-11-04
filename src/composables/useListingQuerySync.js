@@ -39,13 +39,15 @@ const SORT_VALUES = new Set([
   "featured",
   "best-selling",
   "newest",
+  "rating",
+  "discount-desc",
   "price-asc",
   "price-desc",
 ]);
 
 /**
  * @param {unknown} value
- * @returns {'featured' | 'best-selling' | 'newest' | 'price-asc' | 'price-desc'}
+ * @returns {'featured' | 'best-selling' | 'newest' | 'rating' | 'discount-desc' | 'price-asc' | 'price-desc'}
  */
 function parseSort(value) {
   const raw = String(value ?? "").toLowerCase();
@@ -53,7 +55,7 @@ function parseSort(value) {
   if (raw === "asc") return "price-asc";
   if (raw === "desc") return "price-desc";
   if (SORT_VALUES.has(raw)) {
-    return /** @type {'featured' | 'best-selling' | 'newest' | 'price-asc' | 'price-desc'} */ (
+    return /** @type {'featured' | 'best-selling' | 'newest' | 'rating' | 'discount-desc' | 'price-asc' | 'price-desc'} */ (
       raw
     );
   }
@@ -132,6 +134,10 @@ export function useListingQuerySync(options) {
       q.discount = filters.discounts.join(",");
     }
 
+    if (filters.inStockOnly) {
+      q.inStock = "1";
+    }
+
     if (unref(isPriceFiltered)) {
       q.minPrice = String(filters.priceMin);
       q.maxPrice = String(filters.priceMax);
@@ -161,6 +167,10 @@ export function useListingQuerySync(options) {
     filters.colors = parseList(routeQuery.color);
     filters.ratings = parseNumbers(routeQuery.rating);
     filters.discounts = parseNumbers(routeQuery.discount);
+    filters.inStockOnly =
+      routeQuery.inStock === "1" ||
+      routeQuery.inStock === "true" ||
+      routeQuery.inStock === "yes";
     filters.sort = parseSort(routeQuery.sort);
 
     const bounds = unref(priceBounds);

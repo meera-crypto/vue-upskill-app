@@ -34,6 +34,8 @@ export const SORT_OPTIONS = [
   { value: "featured", label: "Featured Products" },
   { value: "best-selling", label: "Best Seller" },
   { value: "newest", label: "Newest Arrival" },
+  { value: "rating", label: "Customer Rating" },
+  { value: "discount-desc", label: "Biggest Discount" },
   { value: "price-asc", label: "Price: Low to High" },
   { value: "price-desc", label: "Price: High to Low" },
 ];
@@ -77,10 +79,35 @@ function sortProducts(list, sort) {
       });
       break;
     case "best-selling":
+      // Highest salesCount first; id keeps ties stable.
       sorted.sort((a, b) => {
         const bySales = compareNumbersDesc(a?.salesCount, b?.salesCount);
         if (bySales !== 0) return bySales;
-        return compareNumbersDesc(a?.rating, b?.rating);
+        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+      });
+      break;
+    case "rating":
+      // Highest rating first; products with no rating sink to the end.
+      sorted.sort((a, b) => {
+        const hasA = typeof a?.rating === "number";
+        const hasB = typeof b?.rating === "number";
+        if (hasA !== hasB) return hasA ? -1 : 1;
+        if (hasA && hasB) {
+          const byRating = compareNumbersDesc(a.rating, b.rating);
+          if (byRating !== 0) return byRating;
+        }
+        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
+      });
+      break;
+    case "discount-desc":
+      // Biggest discount % first (not raw dollar savings).
+      sorted.sort((a, b) => {
+        const byDiscount = compareNumbersDesc(
+          a?.discountPercentage,
+          b?.discountPercentage,
+        );
+        if (byDiscount !== 0) return byDiscount;
+        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
       });
       break;
     case "featured":
@@ -124,12 +151,14 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     ratings: [],
     /** @type {number[]} minimum discount % thresholds */
     discounts: [],
+    /** When true, only products with stock > 0 (Availability → In stock). */
+    inStockOnly: false,
     /** Current price range (synced to catalog bounds when catalog loads). */
     priceMin: 0,
     priceMax: 0,
     /**
      * Listing sort — toolbar dropdown (not a filter chip).
-     * @type {'featured' | 'best-selling' | 'newest' | 'price-asc' | 'price-desc'}
+     * @type {'featured' | 'best-selling' | 'newest' | 'rating' | 'discount-desc' | 'price-asc' | 'price-desc'}
      */
     sort: DEFAULT_SORT,
   });
@@ -233,6 +262,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       filters.colors.length > 0 ||
       filters.ratings.length > 0 ||
       filters.discounts.length > 0 ||
+      filters.inStockOnly ||
       isPriceFiltered.value
     );
   });
@@ -275,6 +305,10 @@ export function useProductFilters(sourceProducts, catalogProducts) {
           (minPct) => discount >= minPct,
         );
         if (!matchesDiscount) return false;
+      }
+
+      if (filters.inStockOnly) {
+        if ((product.stock ?? 0) <= 0) return false;
       }
 
       if (isPriceFiltered.value) {
@@ -342,6 +376,15 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       });
     }
 
+    if (filters.inStockOnly) {
+      chips.push({
+        id: "inStock",
+        group: "inStock",
+        value: "inStock",
+        label: "In stock",
+      });
+    }
+
     if (isPriceFiltered.value) {
       chips.push({
         id: "price",
@@ -391,6 +434,10 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     toggleArrayValue(filters.discounts, value);
   }
 
+  function toggleInStock() {
+    filters.inStockOnly = !filters.inStockOnly;
+  }
+
   function setPriceRange(min, max) {
     const bounds = priceBounds.value;
     let nextMin = Number(min);
@@ -425,6 +472,11 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       return;
     }
 
+    if (chip.group === "inStock") {
+      filters.inStockOnly = false;
+      return;
+    }
+
     const list = filters[chip.group];
     if (!Array.isArray(list)) return;
     const index = list.indexOf(chip.value);
@@ -437,6 +489,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     filters.colors = [];
     filters.ratings = [];
     filters.discounts = [];
+    filters.inStockOnly = false;
     filters.priceMin = priceBounds.value.min;
     filters.priceMax = priceBounds.value.max;
     // Sort stays as the user left it — it is not a filter.
@@ -455,6 +508,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     toggleColor,
     toggleRating,
     toggleDiscount,
+    toggleInStock,
     setSort,
     setPriceRange,
     removeChip,

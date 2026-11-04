@@ -4,7 +4,6 @@
   position: fixed;
   z-index: 200;
   left: 50%;
-  /* Mobile: clear the fixed Favorites / Cart / Profile bar */
   bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   display: flex;
@@ -15,7 +14,7 @@
   pointer-events: none;
 }
 
-/* Tablet+: no bottom bar, so sit closer to the edge */
+/* md (768px) — tablet+: no bottom bar, sit closer to the edge */
 @media (min-width: 768px) {
   .toast-region {
     bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));

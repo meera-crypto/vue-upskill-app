@@ -29,6 +29,7 @@
   display: inline-flex;
 }
 
+/* md (768px) — tablet+: show hero banner */
 @media (min-width: 768px) {
   .hero {
     display: block;

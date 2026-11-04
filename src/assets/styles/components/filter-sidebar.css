@@ -12,7 +12,7 @@
   border: 0;
 }
 
-/* —— Layout: sidebar + grid —— */
+/* —— Layout: sidebar + grid (base = drawer below lg) —— */
 
 .product-list__layout {
   display: grid;
@@ -24,21 +24,23 @@
   min-width: 0;
 }
 
+/*
+ * Drawer backdrop — visible whenever Vue renders it (filtersOpen).
+ * Hidden again at lg when the sticky sidebar takes over.
+ */
 .product-list__drawer-backdrop {
-  display: none;
-}
-
-@media (min-width: 900px) {
-  .product-list__layout {
-    grid-template-columns: 15.5rem minmax(0, 1fr);
-    gap: 2rem;
-    /* Keep sidebar sticky relative to the taller products column */
-    align-items: start;
-  }
-
-  .product-list__filters-toggle {
-    display: none;
-  }
+  display: block;
+  position: fixed;
+  top: var(--site-header-height, 7.5rem);
+  right: 0;
+  /* Clear fixed bottom nav on mobile; md+ has no bottom bar */
+  bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--color-black) 45%, transparent);
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 /* —— Active chips —— */
@@ -97,14 +99,30 @@
   cursor: pointer;
 }
 
-/* —— Sidebar —— */
+/* —— Sidebar (base = off-canvas drawer below lg) —— */
 
 .filter-sidebar {
   display: none;
   flex-direction: column;
   gap: 0;
-  padding: 0;
-  background: transparent;
+  position: fixed;
+  top: var(--site-header-height, 7.5rem);
+  bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+  inset-inline-start: 0;
+  z-index: 50;
+  width: min(20rem, 88vw);
+  max-height: none;
+  overflow: auto;
+  padding: 1.25rem 1rem 1.5rem;
+  background: var(--color-bg);
+  box-shadow: 4px 0 24px color-mix(in srgb, var(--color-black) 18%, transparent);
+  transform: translateX(-105%);
+  transition: transform 0.22s ease;
+}
+
+.filter-sidebar--open {
+  display: flex;
+  transform: translateX(0);
 }
 
 .filter-sidebar__header {
@@ -122,7 +140,9 @@
 }
 
 .filter-sidebar__close {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
   font-size: 1.5rem;
@@ -139,82 +159,59 @@
   margin-block-start: 1.25rem;
 }
 
-@media (min-width: 900px) {
+/* md (768px) — tablet+: no bottom nav, drawer can use full viewport height */
+@media (min-width: 768px) {
+  .product-list__drawer-backdrop,
   .filter-sidebar {
-    display: flex;
-    position: sticky;
-    /* Sit just under the sticky header (logo + search + categories) */
-    top: calc(var(--site-header-height, 5.5rem) + 0.75rem);
-    align-self: start;
-    z-index: 2;
-    /* No outer sidebar scrollbar — only groups like Brand keep their own scroll */
-    max-height: none;
-    overflow: visible;
-    padding-inline-end: 0.25rem;
+    bottom: 0;
   }
 
-  .filter-sidebar__close {
-    display: none;
+  .filter-sidebar {
+    padding-bottom: 2rem;
   }
 }
 
-/*
- * Mobile / tablet drawer — starts below sticky header (+ search on phone)
- * so it isn’t covered by z-index:100 header. Cleared above the bottom nav.
- */
-@media (max-width: 899px) {
+/* lg (1024px) — desktop+: sticky sidebar in the listing layout */
+@media (min-width: 1024px) {
+  .product-list__layout {
+    grid-template-columns: 13.5rem minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+  }
+
+  .product-list__filters-toggle {
+    display: none;
+  }
+
   .product-list__drawer-backdrop {
-    display: block;
-    position: fixed;
-    top: var(--site-header-height, 7.5rem);
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 40;
-    background: color-mix(in srgb, var(--color-black) 45%, transparent);
-    border: none;
-    padding: 0;
-    cursor: pointer;
+    display: none;
   }
 
   .filter-sidebar {
-    position: fixed;
-    top: var(--site-header-height, 7.5rem);
-    bottom: 0;
-    inset-inline-start: 0;
-    z-index: 50;
-    width: min(20rem, 88vw);
+    display: flex;
+    position: sticky;
+    top: calc(var(--site-header-height, 5.5rem) + 0.75rem);
+    bottom: auto;
+    inset-inline-start: auto;
+    align-self: start;
+    z-index: 2;
+    width: auto;
     max-height: none;
-    overflow: auto;
-    padding: 1.25rem 1rem 2rem;
-    background: var(--color-bg);
-    box-shadow: 4px 0 24px
-      color-mix(in srgb, var(--color-black) 18%, transparent);
-    transform: translateX(-105%);
-    transition: transform 0.22s ease;
+    overflow: visible;
+    padding: 0 0.25rem 0 0;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    transition: none;
   }
 
   .filter-sidebar--open {
     display: flex;
-    transform: translateX(0);
+    transform: none;
   }
 
   .filter-sidebar__close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-/* Phone: also clear the fixed bottom Favorites / Cart / Profile bar */
-@media (max-width: 767.98px) {
-  .product-list__drawer-backdrop,
-  .filter-sidebar {
-    bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .filter-sidebar {
-    padding-bottom: 1.5rem;
+    display: none;
   }
 }
 
@@ -235,7 +232,7 @@
   gap: 0.75rem;
   width: 100%;
   padding: 0.85rem 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
@@ -311,7 +308,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.55rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   line-height: 1.35;
   color: var(--color-secondary);
   cursor: pointer;
@@ -334,7 +331,7 @@
 
 .filter-price__values {
   margin: 0 0 0.85rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-secondary);
 }

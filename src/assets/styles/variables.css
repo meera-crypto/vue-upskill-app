@@ -47,6 +47,9 @@
   --font-size-body: 1rem;
   --line-height-body: 1.5;
 
+  /* Small UI text (toolbar counts, controls, captions) — 14px at 16px root */
+  --font-size-sm: 0.875rem;
+
   --font-size-h1: clamp(1.75rem, 1.1rem + 2.8vw, 2.5rem);
   --line-height-h1: 1.2;
 
@@ -66,6 +69,7 @@
   --line-height-h6: 1.45;
 }
 
+/* md (768px) — tablet+ */
 @media (min-width: 768px) {
   :root {
     --container-pad: 2rem;

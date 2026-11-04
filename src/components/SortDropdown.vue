@@ -26,6 +26,7 @@ const model = defineModel({
     <select
       id="product-sort"
       class="sort-dropdown__select"
+      aria-label="Sort by"
       v-model="model"
     >
       <option

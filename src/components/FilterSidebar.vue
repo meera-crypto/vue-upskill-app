@@ -38,6 +38,7 @@ const emit = defineEmits([
   "toggle-color",
   "toggle-rating",
   "toggle-discount",
+  "toggle-in-stock",
   "update:price-min",
   "update:price-max",
   "clear",
@@ -47,6 +48,7 @@ const emit = defineEmits([
 /** Which filter sections are expanded. Start with Price open; lists closed. */
 const openSections = reactive({
   price: true,
+  availability: true,
   brand: false,
   rating: false,
   color: false,
@@ -112,6 +114,8 @@ function selectedCount(key) {
       return props.filters.ratings.length;
     case "discount":
       return props.filters.discounts.length;
+    case "availability":
+      return props.filters.inStockOnly ? 1 : 0;
     case "price": {
       const { min, max } = props.priceBounds;
       return props.filters.priceMin > min || props.filters.priceMax < max
@@ -212,6 +216,59 @@ function selectedCount(key) {
             @input="onPriceMaxInput"
           />
         </div>
+      </div>
+    </section>
+
+    <!-- Availability -->
+    <section class="filter-group">
+      <h3 class="filter-group__heading">
+        <button
+          type="button"
+          class="filter-group__toggle"
+          :aria-expanded="openSections.availability"
+          aria-controls="filter-panel-availability"
+          id="filter-availability-heading"
+          @click="toggleSection('availability')"
+        >
+          <span class="filter-group__toggle-label">
+            Availability
+            <span
+              v-if="selectedCount('availability')"
+              class="filter-group__count"
+            >
+              {{ selectedCount("availability") }}
+            </span>
+          </span>
+          <ChevronDown
+            class="filter-group__chevron"
+            :class="{
+              'filter-group__chevron--open': openSections.availability,
+            }"
+            :size="18"
+            aria-hidden="true"
+          />
+        </button>
+      </h3>
+      <div
+        v-show="openSections.availability"
+        id="filter-panel-availability"
+        class="filter-group__panel"
+        role="region"
+        aria-labelledby="filter-availability-heading"
+      >
+        <ul class="filter-group__list">
+          <li>
+            <label class="filter-option">
+              <input
+                type="checkbox"
+                class="filter-option__input"
+                :checked="filters.inStockOnly"
+                @change="emit('toggle-in-stock')"
+              />
+              <span class="filter-option__label">In stock</span>
+            </label>
+          </li>
+        </ul>
       </div>
     </section>
 

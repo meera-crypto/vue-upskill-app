@@ -1,7 +1,7 @@
-/* Single product card
+/* Single product card — mobile-first (see breakpoints.css)
  *
- * Mobile (<768px): image + details in a row, full-width cart CTA below.
- * Tablet/desktop: vertical card with cart CTA + Buy now.
+ * base (< md): image + details in a row, full-width cart CTA below.
+ * md+: vertical card with cart CTA + Buy now.
  */
 
 .product-card {
@@ -236,7 +236,7 @@
   justify-content: center;
   text-align: center;
   padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   white-space: nowrap;
 }
 
@@ -248,7 +248,20 @@
   box-sizing: border-box;
 }
 
-/* —— Tablet / desktop: stacked card + both actions —— */
+/* Out of stock — single full-width tertiary CTA */
+.product-card__options {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.5rem;
+  box-sizing: border-box;
+  justify-content: center;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+/* md (768px) — tablet+: stacked card + both actions */
 @media (min-width: 768px) {
   .product-card {
     border-bottom: none;
@@ -314,7 +327,7 @@
   }
 
   .product-card__price--original {
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
   }
 
   .product-card__offer {
@@ -330,6 +343,11 @@
     margin-top: 0.5rem;
   }
 
+  /* Keep See All Options as one full-width row on tablet+ */
+  .product-card__actions--oos {
+    grid-template-columns: 1fr;
+  }
+
   .product-card__cart {
     min-height: 2.375rem;
   }
@@ -340,12 +358,18 @@
     min-width: 0;
     min-height: 2.375rem;
     padding: 0.5rem 0.85rem;
-    font-size: 0.875rem;
+    font-size: var(--font-size-sm);
     white-space: nowrap;
+  }
+
+  .product-card__options {
+    min-height: 2.375rem;
+    padding: 0.5rem 0.85rem;
   }
 }
 
-@media (min-width: 1100px) {
+/* xl (1280px) — wide: taller card media */
+@media (min-width: 1280px) {
   .product-card__media {
     max-height: 16rem;
   }

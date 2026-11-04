@@ -112,7 +112,7 @@ const currentYear = new Date().getFullYear();
     <!-- Second row: legal line under the main footer content -->
     <div class="container footer-legal">
       <p class="footer-copy">
-        &copy; {{ currentYear }} NexusCart. All rights reserved.
+        &copy; {{ currentYear }} Mercantile. All rights reserved.
       </p>
       <a href="#terms" class="nav-link">Terms and Conditions</a>
     </div>

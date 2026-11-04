@@ -64,7 +64,7 @@
   padding-block: 0.85rem 1.25rem;
   border-top: 1px solid
     color-mix(in srgb, var(--color-soft-white) 20%, transparent);
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
 }
 
 .footer-copy {

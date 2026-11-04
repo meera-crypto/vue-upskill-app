@@ -1,8 +1,7 @@
-/* Header
-   Breakpoints (match variables.css / product-list):
-   - < 768px  mobile: logo + search under it; Favorites / Cart / Profile in bottom bar
-   - ≥ 768px  tablet+: search centered in the header; icons inline
-   - ≥ 1024px desktop: roomier spacing
+/* Header — mobile-first (see breakpoints.css)
+   - base (< md)  mobile: logo + search under it; Favorites / Cart / Profile bottom bar
+   - md (768px)   tablet+: search centered; icons inline in the bar
+   - lg (1024px)  desktop+: roomier spacing
 */
 
 .site-header {
@@ -336,7 +335,8 @@
     opacity 0.15s ease;
 }
 
-.nav-icon:hover {
+.nav-icon:hover,
+.nav-icon.router-link-active {
   color: var(--color-primary);
   opacity: 1;
 }
@@ -364,15 +364,17 @@
   text-align: center;
 }
 
-/* Clear space so page content isn’t hidden behind the bottom bar */
-@media (max-width: 767.98px) {
-  body {
-    padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
-  }
+/* Mobile: clear space for the fixed bottom bar; removed at md+ */
+body {
+  padding-bottom: calc(3.75rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* —— Tablet+: centered search + icons in the header bar —— */
+/* md (768px) — tablet+: centered search + icons in the header bar */
 @media (min-width: 768px) {
+  body {
+    padding-bottom: 0;
+  }
+
   .header-inner {
     flex-wrap: nowrap;
     min-height: 4.5rem;
@@ -475,7 +477,7 @@
   }
 }
 
-/* —— Desktop: more space between icons —— */
+/* lg (1024px) — desktop+: more space between icons */
 @media (min-width: 1024px) {
   .header-inner {
     min-height: 5rem;

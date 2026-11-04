@@ -9,7 +9,7 @@
  * Filter state lives in App (useProductFilters). This component receives
  * the filtered products + helpers via props and forwards user actions up.
  */
-import { ref, onUnmounted, watch } from "vue";
+import { ref, computed, onUnmounted, watch } from "vue";
 import { SlidersHorizontal } from "@lucide/vue";
 import ProductCard from "@/components/ProductCard.vue";
 import FilterSidebar from "@/components/FilterSidebar.vue";
@@ -112,6 +112,7 @@ const emit = defineEmits([
   "toggle-color",
   "toggle-rating",
   "toggle-discount",
+  "toggle-in-stock",
   "update:sort",
   "update:price-min",
   "update:price-max",
@@ -149,6 +150,24 @@ function isFavorite(productId) {
 function quantityFor(productId) {
   return props.cart[productId] ?? 0;
 }
+
+/**
+ * Result range for the toolbar summary.
+ * With pagination: current page slice. Without (mobile full list): 1–total.
+ */
+const summaryRange = computed(() => {
+  if (props.showPagination) {
+    return { start: props.range.start, end: props.range.end };
+  }
+  return {
+    start: props.total > 0 ? 1 : 0,
+    end: props.total,
+  };
+});
+
+const showResultSummary = computed(
+  () => !props.loading && !props.error && props.total > 0,
+);
 </script>
 
 <template>
@@ -170,10 +189,7 @@ function quantityFor(productId) {
               @click="openFilters"
             >
               <SlidersHorizontal :size="20" aria-hidden="true" />
-              <span
-                v-if="hasActiveFilters"
-                class="product-list__filters-badge"
-              >
+              <span v-if="hasActiveFilters" class="product-list__filters-badge">
                 {{ activeChips.length }}
               </span>
             </button>
@@ -188,12 +204,27 @@ function quantityFor(productId) {
           />
         </div>
 
-        <SortDropdown
-          class="product-list__sort"
-          :options="filterOptions.sorts ?? SORT_OPTIONS"
-          :model-value="filters.sort"
-          @update:model-value="emit('update:sort', $event)"
-        />
+        <div class="product-list__toolbar-end">
+          <p
+            v-if="showResultSummary"
+            class="product-list__count"
+            aria-live="polite"
+          >
+            Showing
+            <span class="product-list__count-strong"
+              >{{ summaryRange.start }}–{{ summaryRange.end }}</span
+            >
+            of
+            <span class="product-list__count-strong">{{ total }} Products</span>
+          </p>
+
+          <SortDropdown
+            class="product-list__sort"
+            :options="filterOptions.sorts ?? SORT_OPTIONS"
+            :model-value="filters.sort"
+            @update:model-value="emit('update:sort', $event)"
+          />
+        </div>
       </div>
 
       <div class="product-list__layout">
@@ -215,6 +246,7 @@ function quantityFor(productId) {
           @toggle-color="emit('toggle-color', $event)"
           @toggle-rating="emit('toggle-rating', $event)"
           @toggle-discount="emit('toggle-discount', $event)"
+          @toggle-in-stock="emit('toggle-in-stock')"
           @update:price-min="emit('update:price-min', $event)"
           @update:price-max="emit('update:price-max', $event)"
           @clear="emit('clear-filters')"
@@ -255,11 +287,11 @@ function quantityFor(productId) {
               <p>
                 <template v-if="searchQuery.trim()">
                   No products match “{{ searchQuery.trim() }}”
-                  <template v-if="hasActiveFilters"> with these filters</template>.
+                  <template v-if="hasActiveFilters">
+                    with these filters</template
+                  >.
                 </template>
-                <template v-else>
-                  No products match these filters.
-                </template>
+                <template v-else> No products match these filters. </template>
               </p>
               <div class="product-list__empty-actions">
                 <button
@@ -312,11 +344,9 @@ function quantityFor(productId) {
             </ul>
 
             <ProductPagination
-              v-if="showPagination"
+              v-if="showPagination && totalPages > 1"
               :page="page"
               :total-pages="totalPages"
-              :total="total"
-              :range="range"
               :page-items="pageItems"
               :can-prev="canPrev"
               :can-next="canNext"

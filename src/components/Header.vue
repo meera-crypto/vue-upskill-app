@@ -2,11 +2,14 @@
 /**
  * Header: logo | search | categories | home / favorites / cart / profile.
  *
- * Mobile (<768px): logo; search under it; text-only category strip; bottom nav.
- * Tablet+ (≥768px): search in the bar; category icons above labels; inline icons.
+ * Base (< md / 768px): logo; search under it; text-only categories; bottom nav.
+ * md+: search in the bar; category icons above labels; inline icons.
  *
  * Categories sit under search and toggle the same `filters.categories` state
  * used by the listing (removed from the filter sidebar).
+ *
+ * Mounted once from App.vue (useAppHeader). Cart / favorites counts come from
+ * shared composables so badges stay in sync. RouterLink powers Home / Favorites / Cart.
  */
 import {
   nextTick,
@@ -28,27 +31,21 @@ import {
 } from "@lucide/vue";
 import logoUrl from "@/assets/images/logo.png";
 import { getCategoryIcon } from "@/utils/categoryIcons.js";
+import { useCart } from "@/composables/useCart.js";
+import { useFavorites } from "@/composables/useFavorites.js";
 
 const props = defineProps({
-  cartCount: {
-    type: Number,
-    default: 0,
-  },
-  favoriteCount: {
-    type: Number,
-    default: 0,
-  },
-  /** Bound from App via v-model:search-query */
+  /** Bound from the page via v-model:search-query */
   searchQuery: {
     type: String,
     default: "",
   },
-  /** From useProductFilters → filterOptions.categories */
+  /** From useAppHeader → category chips */
   categories: {
     type: Array,
     default: () => [],
   },
-  /** Currently selected category slugs */
+  /** Currently selected category slugs (listing only; empty on cart/favorites) */
   selectedCategories: {
     type: Array,
     default: () => [],
@@ -60,6 +57,9 @@ const emit = defineEmits([
   "clear-search",
   "toggle-category",
 ]);
+
+const { cartCount } = useCart();
+const { favoriteCount } = useFavorites();
 
 /** Used so the mobile filter drawer can sit below header + search + categories. */
 const headerEl = useTemplateRef("headerEl");
@@ -195,9 +195,9 @@ onUnmounted(() => {
     <div class="container">
       <div class="header-inner">
         <div class="header-brand">
-          <a href="/" class="brand">
+          <RouterLink :to="{ name: 'products' }" class="brand">
             <img :src="logoUrl" alt="Mercantile" class="brand-logo" />
-          </a>
+          </RouterLink>
         </div>
 
         <div class="header-search">
@@ -234,11 +234,19 @@ onUnmounted(() => {
         <div class="header-actions">
           <nav id="header-nav" class="header-nav" aria-label="Shop actions">
             <div class="header-nav__links">
-              <a href="/" class="nav-icon" aria-label="Home">
+              <RouterLink
+                :to="{ name: 'products' }"
+                class="nav-icon"
+                aria-label="Home"
+              >
                 <Home :size="22" />
                 <span class="nav-label">Home</span>
-              </a>
-              <a href="#favorites" class="nav-icon" aria-label="Favorites">
+              </RouterLink>
+              <RouterLink
+                :to="{ name: 'favorites' }"
+                class="nav-icon"
+                aria-label="Favorites"
+              >
                 <Heart :size="22" />
                 <span class="nav-label">Favorites</span>
                 <span
@@ -248,14 +256,18 @@ onUnmounted(() => {
                 >
                   {{ favoriteCount }}
                 </span>
-              </a>
-              <a href="#cart" class="nav-icon" aria-label="Cart">
+              </RouterLink>
+              <RouterLink
+                :to="{ name: 'cart' }"
+                class="nav-icon"
+                aria-label="Cart"
+              >
                 <ShoppingCart :size="22" />
                 <span class="nav-label">Cart</span>
                 <span v-if="cartCount > 0" class="nav-badge" aria-hidden="true">
                   {{ cartCount }}
                 </span>
-              </a>
+              </RouterLink>
               <a href="#profile" class="nav-icon" aria-label="Profile">
                 <User :size="22" />
                 <span class="nav-label">Profile</span>
