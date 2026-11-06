@@ -13,6 +13,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import Hero from "@/components/Hero.vue";
 import ProductList from "@/components/ProductList.vue";
+import RecentlyViewedProducts from "@/components/RecentlyViewedProducts.vue";
 import { useProducts } from "@/composables/useProducts.js";
 import { useProductFilters } from "@/composables/useProductFilters.js";
 import { usePagination } from "@/composables/usePagination.js";
@@ -21,6 +22,7 @@ import { useToast } from "@/composables/useToast.js";
 import { useCart } from "@/composables/useCart.js";
 import { useFavorites } from "@/composables/useFavorites.js";
 import { mediaQueries } from "@/constants/breakpoints.js";
+import { productDetailsTo } from "@/utils/productRoutes.js";
 
 const {
   catalog,
@@ -125,11 +127,7 @@ watch(page, async (nextPage, prevPage) => {
  */
 const router = useRouter();
 const toast = useToast();
-const {
-  cartQuantities,
-  addToCart: putInCart,
-  buyNow: putInCartForCheckout,
-} = useCart();
+const { cartQuantities, addToCart: putInCart } = useCart();
 const { favoriteIds, toggleFavorite: toggleFavoriteId } = useFavorites();
 
 /** Friendly label for toast copy (title with a safe fallback). */
@@ -144,26 +142,22 @@ function addToCart(product) {
   }
 }
 
-/** Buy now: ensure item is in the cart, then open /cart. */
-function buyNow(product) {
-  const wasNew = !cartQuantities.value[product.id];
-  if (!putInCartForCheckout(product)) return;
-  if (wasNew) {
-    toast.success(`${productLabel(product)} added to cart`);
-  }
-  goToCart();
-}
-
 function goToCart() {
   router.push({ name: "cart" });
+}
+
+/** Out-of-stock “See All Options” → product details (`/product?id=&slug=`). */
+function seeAllOptions(product) {
+  if (!product?.id) return;
+  router.push(productDetailsTo(product));
 }
 
 function toggleFavorite(product) {
   const result = toggleFavoriteId(product);
   if (result === "added") {
-    toast.info(`${productLabel(product)} added to favorites`);
+    toast.favorite(`${productLabel(product)} added to favorites`);
   } else if (result === "removed") {
-    toast.info(`${productLabel(product)} removed from favorites`);
+    toast.favorite(`${productLabel(product)} removed from favorites`);
   }
 }
 
@@ -205,8 +199,8 @@ function onPriceMax(value) {
       @clear-search="clearSearch"
       @add-to-cart="addToCart"
       @go-to-cart="goToCart"
-      @buy-now="buyNow"
       @toggle-favorite="toggleFavorite"
+      @see-all-options="seeAllOptions"
       @toggle-brand="toggleBrand"
       @toggle-color="toggleColor"
       @toggle-rating="toggleRating"
@@ -221,5 +215,10 @@ function onPriceMax(value) {
       @page-next="next"
       @go-to-page="goToPage"
     />
+
+    <!-- Optional: products opened on the details page (localStorage). -->
+    <div class="container">
+      <RecentlyViewedProducts />
+    </div>
   </main>
 </template>

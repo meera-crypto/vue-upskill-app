@@ -3,22 +3,27 @@
  * ProductCard — shows ONE product and talks to parents with emit.
  *
  * Base (< md): horizontal row + full-width cart CTA.
- * md+: vertical card with cart CTA / Buy now.
+ * md+: vertical card with the same cart CTA.
  *
  * Images use <picture>: a <source> picks a smaller URL below md
  * (thumbnail on mobile; primary image as the <img> fallback for md+).
  *
- * Qty +/- lives on the product detail page later. Here, Add to cart adds the
- * item once; the CTA then switches to “Go to cart”.
- * Out of stock: full-width tertiary “See All Options” instead of cart CTAs.
+ * Qty +/- and Buy now live on the product detail page. Here, Add to cart
+ * adds the item once; the CTA then switches to “Go to cart”.
+ * Out of stock: full-width tertiary “See All Options” (opens details).
+ * Image + body (brand/title/price/…) link to `/product?id=…&slug=…`;
+ * cart / favorite buttons stay outside that link.
  */
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 import { Heart, Star } from "@lucide/vue";
 import {
   PRODUCT_IMAGE_FALLBACK,
   hasValidDiscount,
 } from "@/services/productService.js";
 import { mediaQueries } from "@/constants/breakpoints.js";
+import { productDetailsTo } from "@/utils/productRoutes.js";
+import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
 
 const props = defineProps({
   product: {
@@ -39,7 +44,6 @@ const props = defineProps({
 const emit = defineEmits([
   "add-to-cart",
   "go-to-cart",
-  "buy-now",
   "toggle-favorite",
   "see-all-options",
 ]);
@@ -94,6 +98,9 @@ const discountPercentLabel = computed(() => {
 /** Only show rating when the API gave us a real number — never invent stars. */
 const hasRating = computed(() => typeof props.product.rating === "number");
 
+/** CSS modifier for the badge background (red → green by score). */
+const ratingBadgeTone = computed(() => getRatingBadgeTone(props.product.rating));
+
 const ratingLabel = computed(() => {
   if (!hasRating.value) return "";
   const score = props.product.rating.toFixed(1);
@@ -129,11 +136,6 @@ function onGoToCart(product) {
   emit("go-to-cart", product);
 }
 
-function onBuyNow(product) {
-  if (!inStock.value) return;
-  emit("buy-now", product);
-}
-
 function onCartCta(product) {
   if (inCart.value) {
     onGoToCart(product);
@@ -146,32 +148,40 @@ function onToggleFavorite(product) {
   emit("toggle-favorite", product);
 }
 
-/** Placeholder for product options / detail — no detail route yet. */
+/** Opens the product details page (used for out-of-stock CTA). */
 function onSeeAllOptions(product) {
   emit("see-all-options", product);
 }
+
+const detailsTo = computed(() => productDetailsTo(props.product));
 </script>
 
 <template>
   <article class="product-card">
     <div class="product-card__main">
       <div class="product-card__media">
-        <picture class="product-card__picture">
-          <!-- untilMd: smaller file below the md layout step. -->
-          <source
-            :media="mediaQueries.untilMd"
-            :srcset="mobileImageSrc"
-          />
-          <img
-            class="product-card__image"
-            :src="product.image"
-            :alt="displayName"
-            width="150"
-            height="150"
-            loading="lazy"
-            @error="onImageError"
-          />
-        </picture>
+        <RouterLink
+          :to="detailsTo"
+          class="product-card__media-link"
+          :aria-label="`View ${displayName}`"
+        >
+          <picture class="product-card__picture">
+            <!-- untilMd: smaller file below the md layout step. -->
+            <source
+              :media="mediaQueries.untilMd"
+              :srcset="mobileImageSrc"
+            />
+            <img
+              class="product-card__image"
+              :src="product.image"
+              :alt="displayName"
+              width="150"
+              height="150"
+              loading="lazy"
+              @error="onImageError"
+            />
+          </picture>
+        </RouterLink>
         <button
           type="button"
           class="product-card__favorite"
@@ -185,65 +195,73 @@ function onSeeAllOptions(product) {
       </div>
 
       <div class="product-card__body">
-        <div class="product-card__meta">
-          <p v-if="brandOrCategory" class="product-card__brand">
-            {{ brandOrCategory }}
-          </p>
-          <p
-            v-if="!inStock || fewLeft"
-            class="product-card__stock"
-            aria-live="polite"
-          >
-            {{ inStock ? "Only few left !" : "Out of stock" }}
-          </p>
-        </div>
-
-        <h3 class="product-card__title">{{ displayName }}</h3>
-
-        <p v-if="description" class="product-card__description">
-          {{ description }}
-        </p>
-
-        <p
-          v-if="hasRating"
-          class="product-card__rating"
-          :aria-label="ratingLabel"
+        <RouterLink
+          :to="detailsTo"
+          class="product-card__body-link"
+          :aria-label="`View ${displayName}`"
         >
-          <Star
-            class="product-card__rating-icon"
-            :size="14"
-            fill="currentColor"
-            aria-hidden="true"
-          />
-          <span class="product-card__rating-score">
-            {{ product.rating.toFixed(1) }}
-          </span>
-          <span
-            v-if="product.reviewCount"
-            class="product-card__rating-count"
-          >
-            ({{ product.reviewCount }})
-          </span>
-        </p>
+          <div class="product-card__meta">
+            <p v-if="brandOrCategory" class="product-card__brand">
+              {{ brandOrCategory }}
+            </p>
+            <p
+              v-if="!inStock || fewLeft"
+              class="product-card__stock"
+              aria-live="polite"
+            >
+              {{ inStock ? "Only few left !" : "Out of stock" }}
+            </p>
+          </div>
 
-        <div class="product-card__pricing">
-          <p class="product-card__price">${{ product.price.toFixed(2) }}</p>
+          <h3 class="product-card__title">{{ displayName }}</h3>
+
+          <p v-if="description" class="product-card__description">
+            {{ description }}
+          </p>
+
           <p
-            v-if="showDiscount"
-            class="product-card__price product-card__price--original"
+            v-if="hasRating"
+            class="product-card__rating"
+            :class="
+              ratingBadgeTone
+                ? `product-card__rating--${ratingBadgeTone}`
+                : undefined
+            "
+            :aria-label="ratingLabel"
           >
-            ${{ product.originalPrice.toFixed(2) }}
+            <Star
+              class="product-card__rating-icon"
+              :size="14"
+              fill="currentColor"
+              aria-hidden="true"
+            />
+            <span class="product-card__rating-score">
+              {{ product.rating.toFixed(1) }}
+            </span>
+            <span
+              v-if="product.reviewCount"
+              class="product-card__rating-count"
+            >
+              ({{ product.reviewCount }})
+            </span>
           </p>
-          <p v-if="discountPercentLabel" class="product-card__offer">
-            {{ discountPercentLabel }}
-          </p>
-        </div>
 
-        <!-- Lives in the content column so mobile width matches details, not image -->
-        <div
-          class="product-card__actions"
-          :class="{ 'product-card__actions--oos': !inStock }"
-        >
+          <div class="product-card__pricing">
+            <p class="product-card__price">${{ product.price.toFixed(2) }}</p>
+            <p
+              v-if="showDiscount"
+              class="product-card__price product-card__price--original"
+            >
+              ${{ product.originalPrice.toFixed(2) }}
+            </p>
+            <p v-if="discountPercentLabel" class="product-card__offer">
+              {{ discountPercentLabel }}
+            </p>
+          </div>
+        </RouterLink>
+
+        <!-- Outside the body link so cart clicks don’t navigate away -->
+        <div class="product-card__actions">
           <template v-if="inStock">
             <button
               type="button"
@@ -251,14 +269,6 @@ function onSeeAllOptions(product) {
               @click="onCartCta(product)"
             >
               {{ inCart ? "Go to cart" : "Add to cart" }}
-            </button>
-
-            <button
-              type="button"
-              class="btn btn--tertiary product-card__buy"
-              @click="onBuyNow(product)"
-            >
-              Buy now
             </button>
           </template>
 

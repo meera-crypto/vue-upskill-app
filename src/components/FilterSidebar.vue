@@ -304,7 +304,10 @@ function selectedCount(key) {
         role="region"
         aria-labelledby="filter-brand-heading"
       >
-        <ul class="filter-group__list filter-group__list--scroll">
+        <p v-if="options.brands.length === 0" class="filter-group__empty">
+          No brands found
+        </p>
+        <ul v-else class="filter-group__list filter-group__list--scroll">
           <li v-for="brand in options.brands" :key="brand">
             <label class="filter-option">
               <input
@@ -405,7 +408,9 @@ function selectedCount(key) {
             <button
               type="button"
               class="filter-color"
-              :class="{ 'filter-color--selected': isColorSelected(color.value) }"
+              :class="{
+                'filter-color--selected': isColorSelected(color.value),
+              }"
               :style="{ '--swatch': color.hex }"
               :aria-pressed="isColorSelected(color.value)"
               :aria-label="color.label"

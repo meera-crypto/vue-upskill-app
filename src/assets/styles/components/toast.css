@@ -34,36 +34,6 @@
   pointer-events: auto;
 }
 
-.toast__icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-top: 0.05rem;
-  border-radius: 999px;
-  color: var(--color-soft-white);
-}
-
-.toast--success .toast__icon {
-  color: var(--color-soft-white);
-}
-
-.toast--info .toast__icon {
-  background-color: color-mix(
-    in srgb,
-    var(--color-soft-white) 14%,
-    transparent
-  );
-  color: var(--color-favorite);
-}
-
-.toast--error .toast__icon {
-  background-color: color-mix(in srgb, var(--color-danger) 14%, transparent);
-  color: var(--color-danger);
-}
-
 .toast__message {
   flex: 1 1 auto;
   margin: 0;

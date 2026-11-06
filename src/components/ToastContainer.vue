@@ -6,7 +6,7 @@
  * aria-live="polite" + role="status" lets assistive tech announce new
  * toasts without interrupting the user mid-action.
  */
-import { Check, Heart, X } from "@lucide/vue";
+import { X } from "@lucide/vue";
 import { useToast } from "@/composables/useToast.js";
 
 const { toasts, dismiss } = useToast();
@@ -27,10 +27,6 @@ const { toasts, dismiss } = useToast();
         :class="`toast--${toast.type}`"
         role="status"
       >
-        <span class="toast__icon" aria-hidden="true">
-          <Heart v-if="toast.type === 'info'" :size="16" fill="currentColor" />
-          <Check v-else :size="16" />
-        </span>
         <p class="toast__message">{{ toast.message }}</p>
         <button
           type="button"

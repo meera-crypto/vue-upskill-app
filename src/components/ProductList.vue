@@ -3,8 +3,9 @@
  * ProductList — toolbar, filters, and product grid.
  *
  * Layout:
- * - Desktop: sticky FilterSidebar on the left + grid on the right
+ * - Desktop: sticky FilterSidebar on the left + chips + grid on the right
  * - Mobile: filter icon beside “Products” opens the same sidebar as a drawer
+ * - Active filter chips sit above the product grid (aligned with the listing)
  *
  * Filter state lives in App (useProductFilters). This component receives
  * the filtered products + helpers via props and forwards user actions up.
@@ -106,8 +107,8 @@ const emit = defineEmits([
   "clear-search",
   "add-to-cart",
   "go-to-cart",
-  "buy-now",
   "toggle-favorite",
+  "see-all-options",
   "toggle-brand",
   "toggle-color",
   "toggle-rating",
@@ -197,11 +198,6 @@ const showResultSummary = computed(
               Products
             </h2>
           </div>
-          <ActiveFilterChips
-            :chips="activeChips"
-            @remove="emit('remove-chip', $event)"
-            @clear="emit('clear-filters')"
-          />
         </div>
 
         <div class="product-list__toolbar-end">
@@ -254,6 +250,12 @@ const showResultSummary = computed(
         />
 
         <div class="product-list__main">
+          <ActiveFilterChips
+            :chips="activeChips"
+            @remove="emit('remove-chip', $event)"
+            @clear="emit('clear-filters')"
+          />
+
           <div
             v-if="loading"
             class="product-list__status"
@@ -337,8 +339,8 @@ const showResultSummary = computed(
                   :quantity="quantityFor(product.id)"
                   @add-to-cart="emit('add-to-cart', $event)"
                   @go-to-cart="emit('go-to-cart', $event)"
-                  @buy-now="emit('buy-now', $event)"
                   @toggle-favorite="emit('toggle-favorite', $event)"
+                  @see-all-options="emit('see-all-options', $event)"
                 />
               </li>
             </ul>

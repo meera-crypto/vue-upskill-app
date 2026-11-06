@@ -23,7 +23,7 @@ Recommended page sections, from top to bottom:
 1. Header: logo; global search on tablet+; account/wishlist/cart entry points.
    - Mobile (&lt;768px): logo in the top bar; Favorites / Cart / Profile in a fixed bottom icon bar (no hamburger drawer).
    - Tablet+ (≥768px): search centered in the header; icons inline in the header bar.
-2. Breadcrumb navigation.
+2. Breadcrumb navigation (shared `Breadcrumbs` on details, favorites, and cart; listing is the catalog root).
 3. Category title / hero banner — tablet+ only; hidden on mobile.
 4. Search within the current category (header search on tablet+).
 5. Product listing toolbar: result count and sorting control.
@@ -31,7 +31,7 @@ Recommended page sections, from top to bottom:
 7. Active filter chips with individual remove actions and a Clear All action.
 8. Responsive product grid.
 9. Pagination or Load More control.
-10. Optional sections: recently viewed products and category-related content.
+10. Optional sections: recently viewed products; product details includes Similar products (same category, ranked by brand/tags).
 
 ## 3. Functional Requirements
 
@@ -51,8 +51,10 @@ Recommended page sections, from top to bottom:
 
 ### 3.2 Search
 
-- Search by product name and brand; category search can be added.
+- Search by product name, brand, and tags; category search can be added.
 - Use case-insensitive partial matching.
+- Header search shows a product suggestions dropdown while typing (title / brand / tags; matched search text highlighted); choosing a product opens details.
+- Suggestions include a View all action at the bottom that applies the typed query on the listing; keyboard arrows reach every suggestion (including those below the fold) and View all.
 - Provide a clear-search action and display the result count.
 - Debounce API-backed search by approximately 250–350 ms.
 - Keep current filters and sort selection when the search changes, unless product requirements say otherwise.
@@ -65,7 +67,7 @@ Recommended page sections, from top to bottom:
 | --------------------- | -------------------------------------------------------------------- | -------------------------------------------------------- |
 | Category              | Horizontal strip under header search (not in sidebar); single-select | Beauty, Laptops — text on mobile; icon + text on desktop |
 | Price                 | Range slider + Low/High sort checkboxes                              | ₹1,000–₹10,000; Price: Low to High                       |
-| Brand                 | Checkboxes                                                           | SoundMax, AudioPro                                       |
+| Brand                 | Checkboxes (scoped to selected category when one is active)          | SoundMax, AudioPro                                       |
 | Rating                | Radio/checkbox options                                               | 4 stars and above                                        |
 | Availability          | Checkbox                                                             | In stock                                                 |
 | Color / Size          | Swatches / buttons                                                   | Black, White / S, M, L                                   |
@@ -74,6 +76,7 @@ Recommended page sections, from top to bottom:
 - Support multiple selected values within a filter group.
 - Use OR logic within the same group where appropriate (e.g., Brand A OR Brand B).
 - Use AND logic across different groups (e.g., brand AND price AND in-stock).
+- Brand options depend on category: with a category selected, show only brands that appear in that category; with no category, show all brands. Drop brand selections that fall outside the updated option list when the category changes. If the scoped brand list is empty, show “No brands found” in the Brand filter panel.
 - Show active filter chips and allow each one to be removed independently.
 - Provide Clear All and preserve unrelated filters when one filter changes.
 - Update the result count and handle zero-result combinations.
@@ -160,7 +163,8 @@ src/
  ├── composables/ (useProducts.js, useProductFilters.js, useCart.js, useWishlist.js)
  ├── services/ (productService.js)
  ├── stores/ (cartStore.js — optional initially)
- ├── views/ (ProductListingPage.vue)
+ ├── views/ (ProductListingPage.vue, ProductDetailsPage.vue,
+ │           FavoritesPage.vue, CartPage.vue)
  ├── router/ (index.js)
  └── App.vue
 ```
@@ -173,6 +177,18 @@ src/
 | Services    | Fetch data and isolate API details.                    |
 | Stores      | Share cart/wishlist state when complexity warrants it. |
 | Router      | Handle product navigation and URL query parameters.    |
+
+### Product details route
+
+- Path: `/product?id=101&slug=wireless-headphones-pro` (route name `product-details`).
+- `id` is required and drives the fetch; `slug` is optional readable text and is filled in when the product loads.
+- Old `/products/:id` URLs redirect to `/product?id=…` (slug is added after load).
+- Loads one product via DummyJSON `GET /products/:id` (see `fetchProductById` / `useProductDetail`).
+- Shows gallery, price/discount, stock, description, quantity stepper (− / typed input / +), Add to cart beside the stepper (label stays “Add to cart”; each click adds the selected qty to the cart, capped by stock), full-width Buy now below, favorites, and reviews when present.
+- Similar products (below reviews): horizontally scrollable row of products in the same category, ranked by shared brand and tags (`getSimilarProducts`). Show up to 8 cards; when more exist, a View all control opens the listing with the matching category (or brand) filter applied.
+- Recently viewed: opening a product details page records a product snapshot (newest first, max 8, deduped) in `localStorage` via `useRecentlyViewed`. Show a horizontal row on the listing (below the grid) and on details (below Similar, excluding the current product). Hide the section when empty. Cart / favorite actions on those cards use the same shared composables as the listing.
+- Listing cards link image + title to details; out-of-stock “See All Options” opens the same page.
+- Loading, error + Retry, and not-found states are required.
 
 ### Vue concepts to practise
 
@@ -233,7 +249,7 @@ WCAG 2.2: https://www.w3.org/TR/WCAG22/
 | Wishlist             | Save products for later                  | Medium   |
 | Quick View           | Preview without leaving listing          | Medium   |
 | Product comparison   | Compare specifications                   | Medium   |
-| Recently viewed      | Return to previously explored products   | Medium   |
+| Recently viewed      | Return to previously explored products (`useRecentlyViewed` + listing/details row) | Medium (done) |
 | Variant selection    | Choose color/size before adding          | Medium   |
 | Back-in-stock alerts | Express interest in unavailable products | Advanced |
 
@@ -251,7 +267,7 @@ Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=10
 | Invalid discount                | Do not show negative or misleading savings.                       |
 | Filters changed on a later page | Reset to a valid page, normally page 1.                           |
 | Rapid search changes            | Prevent stale responses from overwriting current results.         |
-| Repeated Add to Cart            | Apply a defined quantity/update rule.                             |
+| Repeated Add to Cart            | Details page: each click adds the selected qty (stock-capped). Listing cards: first add, then “Go to cart”. |
 | Zero price                      | Display 0 correctly; do not treat it as missing.                  |
 | Variants required               | Validate selected variant before adding to cart.                  |
 | Refresh                         | Restore URL state and persisted cart if implemented.              |
