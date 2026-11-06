@@ -202,7 +202,24 @@ function mapDummyProduct(raw) {
       ? raw.thumbnail.trim()
       : image;
   const stock = Number(raw.stock);
-  const reviews = Array.isArray(raw.reviews) ? raw.reviews : [];
+  const rawReviews = Array.isArray(raw.reviews) ? raw.reviews : [];
+  const reviews = rawReviews
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const review = /** @type {Record<string, unknown>} */ (entry);
+      const reviewRating = Number(review.rating);
+      return {
+        rating: Number.isFinite(reviewRating) ? reviewRating : null,
+        comment:
+          typeof review.comment === "string" ? review.comment.trim() : "",
+        date: typeof review.date === "string" ? review.date : "",
+        reviewerName:
+          typeof review.reviewerName === "string"
+            ? review.reviewerName.trim()
+            : "Customer",
+      };
+    })
+    .filter(Boolean);
   const rating = typeof raw.rating === "number" ? raw.rating : null;
   const category = typeof raw.category === "string" ? raw.category : "";
   const meta =
@@ -223,6 +240,10 @@ function mapDummyProduct(raw) {
   /** Featured: strong rating and/or meaningful discount. */
   const isFeatured =
     (rating != null && rating >= 4) || displayDiscount >= 15;
+
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags.filter((tag) => typeof tag === "string" && tag.trim())
+    : [];
 
   return {
     id: raw.id,
@@ -250,6 +271,24 @@ function mapDummyProduct(raw) {
     thumbnail,
     colors: extractColors(title, description),
     isFeatured,
+    /** Detail-page extras from DummyJSON (safe empty defaults for listing). */
+    reviews,
+    tags,
+    sku: typeof raw.sku === "string" ? raw.sku : "",
+    warrantyInformation:
+      typeof raw.warrantyInformation === "string"
+        ? raw.warrantyInformation
+        : "",
+    shippingInformation:
+      typeof raw.shippingInformation === "string"
+        ? raw.shippingInformation
+        : "",
+    returnPolicy:
+      typeof raw.returnPolicy === "string" ? raw.returnPolicy : "",
+    availabilityStatus:
+      typeof raw.availabilityStatus === "string"
+        ? raw.availabilityStatus
+        : "",
   };
 }
 
@@ -314,7 +353,51 @@ export async function fetchCatalog({ signal } = {}) {
 }
 
 /**
- * Case-insensitive partial match on product title or brand.
+ * Case-insensitive partial match on title, brand, or tags.
+ * Shared by listing search, suggestions, and searchProducts().
+ *
+ * @param {Record<string, unknown>} product
+ * @param {string} query already trimmed + lowercased, or any string
+ * @returns {boolean}
+ */
+export function productMatchesSearch(product, query) {
+  const q = String(query ?? "")
+    .trim()
+    .toLowerCase();
+  if (!q) return true;
+
+  const title = String(product?.title ?? "").toLowerCase();
+  if (title.includes(q)) return true;
+
+  const brand = String(product?.brand ?? "").toLowerCase();
+  if (brand.includes(q)) return true;
+
+  const tags = Array.isArray(product?.tags) ? product.tags : [];
+  return tags.some((tag) => String(tag).toLowerCase().includes(q));
+}
+
+/**
+ * First tag that contains the query (for suggestion meta), or "".
+ * @param {Record<string, unknown>} product
+ * @param {string} query
+ * @returns {string}
+ */
+export function matchingProductTag(product, query) {
+  const q = String(query ?? "")
+    .trim()
+    .toLowerCase();
+  if (!q) return "";
+
+  const tags = Array.isArray(product?.tags) ? product.tags : [];
+  for (const tag of tags) {
+    const label = String(tag ?? "").trim();
+    if (label && label.toLowerCase().includes(q)) return label;
+  }
+  return "";
+}
+
+/**
+ * Case-insensitive partial match on product title, brand, or tags.
  * Prefer filtering an already-loaded catalog in the composable; this helper
  * remains for one-off searches that still need a network fetch.
  * @param {{ q: string, limit?: number, skip?: number, signal?: AbortSignal }} params
@@ -327,11 +410,9 @@ export async function searchProducts({ q, limit = 12, skip = 0, signal } = {}) {
   }
 
   const { products: catalog } = await fetchCatalog({ signal });
-  const matched = catalog.filter((product) => {
-    const title = String(product.title ?? "").toLowerCase();
-    const brand = String(product.brand ?? "").toLowerCase();
-    return title.includes(query) || brand.includes(query);
-  });
+  const matched = catalog.filter((product) =>
+    productMatchesSearch(product, query),
+  );
 
   return {
     products: matched.slice(skip, skip + limit),

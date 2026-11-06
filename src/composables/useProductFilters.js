@@ -14,10 +14,10 @@ import { reactive, computed, unref, watch } from "vue";
 import { COLOR_SWATCH_HEX } from "@/services/productService.js";
 
 export const RATING_FILTER_OPTIONS = [
-  { value: 4, label: "4★ & up" },
-  { value: 3, label: "3★ & up" },
-  { value: 2, label: "2★ & up" },
-  { value: 1, label: "1★ & up" },
+  { value: 4, label: "4 ★ & above" },
+  { value: 3, label: "3 ★ & above" },
+  { value: 2, label: "2 ★ & above" },
+  { value: 1, label: "1 ★ & above" },
 ];
 
 export const DISCOUNT_FILTER_OPTIONS = [
@@ -218,6 +218,15 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     const categoriesMap = new Map();
     const brands = new Set();
     const colors = new Set();
+    // Brand list depends on category: selected category → brands in that
+    // category only; no category → every brand in the catalog.
+    const selectedCategories = filters.categories;
+    const brandProducts =
+      selectedCategories.length > 0
+        ? catalogList.value.filter((product) =>
+            selectedCategories.includes(product?.category),
+          )
+        : catalogList.value;
 
     for (const product of catalogList.value) {
       if (product?.category) {
@@ -226,10 +235,13 @@ export function useProductFilters(sourceProducts, catalogProducts) {
           product.categoryLabel || product.category,
         );
       }
-      if (product?.brand) brands.add(product.brand);
       for (const color of product?.colors ?? []) {
         colors.add(color);
       }
+    }
+
+    for (const product of brandProducts) {
+      if (product?.brand) brands.add(product.brand);
     }
 
     return {
@@ -249,6 +261,24 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       sorts: SORT_OPTIONS,
     };
   });
+
+  /**
+   * When the category changes, drop brand selections that are no longer
+   * in the brand checkbox list (avoids invisible chips / empty results).
+   *
+   * Wait until the catalog has loaded. On refresh, URL sync restores brands
+   * first; if we prune against an empty option list, every brand is wiped
+   * and then written back out of the URL.
+   */
+  watch(
+    () => filterOptions.value.brands,
+    (availableBrands) => {
+      if (filters.brands.length === 0) return;
+      if (catalogList.value.length === 0) return;
+      const allowed = new Set(availableBrands);
+      filters.brands = filters.brands.filter((brand) => allowed.has(brand));
+    },
+  );
 
   const isPriceFiltered = computed(() => {
     const { min, max } = priceBounds.value;

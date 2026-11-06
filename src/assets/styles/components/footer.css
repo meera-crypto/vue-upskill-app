@@ -6,36 +6,167 @@
   border-top: 1px solid var(--color-border);
 }
 
-.footer-inner {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding-block: 1.25rem;
+/* Trust strip — Support / COD / Warranty / Quality */
+.footer-trust {
+  padding-block: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.footer-nav {
+.footer-trust__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-trust__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.footer-trust__icon {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.footer-trust__text {
+  min-width: 0;
+}
+
+.footer-trust__title {
+  margin: 0 0 0.2rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-secondary);
+}
+
+.footer-trust__desc {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--color-black);
+}
+
+/* Logo + menu columns */
+.footer-main {
+  display: grid;
+  gap: 1.75rem;
+  padding-block: 1.75rem 1.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.footer-brand,
+.footer-brand__meta {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  align-items: flex-start;
+  gap: 0.85rem;
 }
 
-.footer-nav .nav-link {
+.footer-brand {
+  min-width: 0;
+}
+
+.footer-brand__logo {
+  height: 2.75rem;
+}
+
+/* Tagline + socials grouped under the logo */
+.footer-brand__meta {
+  max-width: 18rem;
+}
+
+.footer-brand__tagline {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  color: var(--color-black);
+}
+
+.footer-menus {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.footer-menu {
+  border-top: 1px solid var(--color-border);
+}
+
+.footer-menu:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.footer-menu__heading {
+  margin: 0;
+}
+
+.footer-menu__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.85rem 0;
+  border: 0;
+  background: transparent;
   color: inherit;
-  text-decoration: none;
-  opacity: 0.9;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.footer-nav .nav-link:hover {
-  opacity: 1;
+.footer-menu__title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-secondary);
+}
+
+.footer-menu__icon {
+  flex-shrink: 0;
+  color: var(--color-secondary);
+}
+
+/* Mobile accordion: links stay in the DOM; CSS shows them when open */
+.footer-menu__list {
+  display: none;
+  margin: 0;
+  padding: 0 0 0.85rem;
+  list-style: none;
+}
+
+.footer-menu--open .footer-menu__list {
+  display: block;
+}
+
+.footer-menu__item + .footer-menu__item {
+  margin-top: 0.45rem;
+}
+
+.footer-menu__link {
+  color: var(--color-black);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.footer-menu__link:hover {
+  color: var(--color-primary);
   text-decoration: underline;
 }
 
+/* Social icons under the brand tagline */
 .footer-social {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
-  padding-top: 0.25rem;
+  gap: 0.75rem;
 }
 
 .footer-social .nav-icon {
@@ -44,9 +175,7 @@
   justify-content: center;
   color: inherit;
   opacity: 0.9;
-  transition:
-   
-    opacity 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .footer-social .nav-icon:hover {
@@ -62,18 +191,19 @@
   justify-content: space-between;
   gap: 0.75rem 1.5rem;
   padding-block: 0.85rem 1.25rem;
-  border-top: 1px solid
-    color-mix(in srgb, var(--color-soft-white) 20%, transparent);
+  border-top: 1px solid var(--color-border);
   font-size: var(--font-size-sm);
 }
 
 .footer-copy {
   margin: 0;
+  font-size: var(--font-size-sm);
   opacity: 0.85;
 }
 
 .footer-legal .nav-link {
   color: inherit;
+  font-size: var(--font-size-sm);
   text-decoration: none;
   opacity: 0.9;
 }
@@ -81,4 +211,64 @@
 .footer-legal .nav-link:hover {
   opacity: 1;
   text-decoration: underline;
+}
+
+@media (min-width: 768px) {
+  .footer-trust__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  .footer-trust__item {
+    padding: 1.25rem;
+  }
+
+  .footer-trust__title,
+  .footer-menu__title {
+    font-size: var(--font-size-body);
+  }
+
+  .footer-main {
+    grid-template-columns: minmax(10rem, 24rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 2rem 2.5rem;
+    padding-block: 2rem 1.5rem;
+  }
+
+  .footer-brand,
+  .footer-brand__meta {
+    gap: 1rem;
+  }
+
+  .footer-brand__logo {
+    height: 3rem;
+  }
+
+  .footer-menus {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem 2.5rem;
+  }
+
+  .footer-menu,
+  .footer-menu:last-child {
+    border: 0;
+  }
+
+  /* Tablet+: always show columns; hide accordion chrome */
+  .footer-menu__toggle {
+    display: block;
+    padding: 0;
+    margin-bottom: 0.75rem;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .footer-menu__icon {
+    display: none;
+  }
+
+  .footer-menu__list {
+    display: block;
+    padding: 0;
+  }
 }

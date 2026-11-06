@@ -11,7 +11,7 @@
  */
 import { ref } from "vue";
 
-/** @typedef {'success' | 'error' | 'info'} ToastType */
+/** @typedef {'success' | 'error' | 'info' | 'favorite'} ToastType */
 
 /**
  * @typedef {object} Toast
@@ -69,6 +69,15 @@ function info(message, options = {}) {
   return show(message, { ...options, type: "info" });
 }
 
+/**
+ * Favorites-specific feedback (separate icon/color from generic info).
+ * @param {string} message
+ * @param {{ duration?: number }} [options]
+ */
+function favorite(message, options = {}) {
+  return show(message, { ...options, type: "favorite" });
+}
+
 export function useToast() {
   return {
     toasts,
@@ -76,6 +85,7 @@ export function useToast() {
     success,
     error,
     info,
+    favorite,
     dismiss,
   };
 }

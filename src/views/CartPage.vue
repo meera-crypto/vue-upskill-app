@@ -7,11 +7,14 @@
  * - useRouter() navigates “Continue shopping” back to products
  * - Quantity +/- updates reactive state; computed subtotal recalculates
  */
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { Minus, Plus, Trash2 } from "@lucide/vue";
+import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import { useCart } from "@/composables/useCart.js";
 import { useToast } from "@/composables/useToast.js";
 import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
+import { productDetailsTo } from "@/utils/productRoutes.js";
 
 const router = useRouter();
 const toast = useToast();
@@ -24,6 +27,12 @@ const {
   removeFromCart,
   clearCart,
 } = useCart();
+
+/** Products → Cart (current page has no link). */
+const breadcrumbItems = computed(() => [
+  { label: "Products", to: { name: "products" } },
+  { label: "Cart" },
+]);
 
 function productLabel(product) {
   return product?.title?.trim() || "Item";
@@ -59,6 +68,8 @@ function lineMax(product) {
   <!-- Header is in App.vue — shared across routes. -->
   <main class="cart-page">
     <div class="container cart-page__inner">
+      <Breadcrumbs :items="breadcrumbItems" />
+
       <header class="cart-page__header">
         <h1 class="cart-page__title">Your cart</h1>
         <p v-if="cartCount > 0" class="cart-page__count">
@@ -70,7 +81,7 @@ function lineMax(product) {
         <p class="cart-page__empty-text">Your cart is empty.</p>
         <button
           type="button"
-          class="btn btn--primary"
+          class="btn btn--secondary"
           @click="continueShopping"
         >
           Continue shopping
@@ -105,7 +116,12 @@ function lineMax(product) {
                   {{ line.product.brand || line.product.categoryLabel }}
                 </p>
                 <h2 class="cart-line__title">
-                  {{ productLabel(line.product) }}
+                  <RouterLink
+                    class="cart-line__title-link"
+                    :to="productDetailsTo(line.product)"
+                  >
+                    {{ productLabel(line.product) }}
+                  </RouterLink>
                 </h2>
                 <p class="cart-line__price">
                   ${{ Number(line.product.price).toFixed(2) }}
@@ -177,7 +193,7 @@ function lineMax(product) {
           <div class="cart-page__summary-actions">
             <button
               type="button"
-              class="btn btn--tertiary"
+              class="btn btn--secondary"
               @click="continueShopping"
             >
               Continue shopping

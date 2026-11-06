@@ -15,7 +15,10 @@
  * - debounce — wait ~300 ms after typing before applying search
  */
 import { ref, computed, onMounted } from "vue";
-import { fetchCatalog } from "@/services/productService.js";
+import {
+  fetchCatalog,
+  productMatchesSearch,
+} from "@/services/productService.js";
 
 /** Shared across all useProducts() callers. */
 const catalog = ref([]);
@@ -73,11 +76,9 @@ const products = computed(() => {
   const trimmed = appliedQuery.value.trim().toLowerCase();
   if (!trimmed) return catalog.value;
 
-  return catalog.value.filter((product) => {
-    const title = String(product.title ?? "").toLowerCase();
-    const brand = String(product.brand ?? "").toLowerCase();
-    return title.includes(trimmed) || brand.includes(trimmed);
-  });
+  return catalog.value.filter((product) =>
+    productMatchesSearch(product, trimmed),
+  );
 });
 
 function retry() {

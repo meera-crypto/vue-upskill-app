@@ -99,13 +99,15 @@ function isInCart(productId) {
 }
 
 /**
- * First add sets quantity to 1. Listing cards then show “Go to cart”
- * instead of bumping qty (qty +/- lives on the cart page).
+ * First add sets quantity (default 1). Listing cards then show “Go to cart”
+ * instead of bumping qty. Details can pass a dropdown/custom qty;
+ * cart page still owns later +/- updates.
  *
  * @param {Record<string, unknown>} product
+ * @param {number} [quantity]
  * @returns {boolean} true when the product was newly added
  */
-function addToCart(product) {
+function addToCart(product, quantity = 1) {
   if (!product || (product.stock ?? 0) <= 0) return false;
 
   const id = product.id;
@@ -113,9 +115,13 @@ function addToCart(product) {
 
   if (items.value[id]) return false;
 
+  const stock = Number(product.stock);
+  const max = Number.isFinite(stock) && stock > 0 ? stock : 1;
+  const qty = Math.min(max, Math.max(1, Math.floor(Number(quantity) || 1)));
+
   items.value = {
     ...items.value,
-    [id]: { product: { ...product }, quantity: 1 },
+    [id]: { product: { ...product }, quantity: qty },
   };
   persist();
   return true;

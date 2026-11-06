@@ -8,6 +8,7 @@
 
 @import "./components/header.css";
 @import "./components/hero.css";
+@import "./components/breadcrumb.css";
 @import "./components/footer.css";
 @import "./components/product-list.css";
 @import "./components/sort-dropdown.css";
@@ -17,3 +18,5 @@
 @import "./components/toast.css";
 @import "./components/cart-page.css";
 @import "./components/favorites-page.css";
+@import "./components/product-details.css";
+@import "./components/product-carousel.css";

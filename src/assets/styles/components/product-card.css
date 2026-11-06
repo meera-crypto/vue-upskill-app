@@ -1,7 +1,7 @@
 /* Single product card — mobile-first (see breakpoints.css)
  *
  * base (< md): image + details in a row, full-width cart CTA below.
- * md+: vertical card with cart CTA + Buy now.
+ * md+: vertical card with the same full-width cart CTA.
  */
 
 .product-card {
@@ -35,6 +35,14 @@
     var(--color-neutral) 16%,
     var(--color-bg)
   );
+}
+
+.product-card__media-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
 }
 
 /* <picture> is inline by default — make it fill the media frame like the img. */
@@ -106,6 +114,22 @@
   padding: 0.65rem 0.75rem 0.75rem;
 }
 
+/* Brand / title / price open details; actions stay as separate buttons. */
+.product-card__body-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.product-card__body-link:hover .product-card__title {
+  text-decoration: underline;
+}
+
 .product-card__meta {
   display: flex;
   align-items: baseline;
@@ -164,6 +188,27 @@
   color: #fff;
   background-color: #2e7d32;
   line-height: 1;
+}
+
+/* Rating badge tones — banded by score (see getRatingBadgeTone). */
+.product-card__rating--below-1 {
+  background-color: #c62828;
+}
+
+.product-card__rating--1-2 {
+  background-color: #e65100;
+}
+
+.product-card__rating--2-3 {
+  background-color: #f9a825;
+}
+
+.product-card__rating--3-4 {
+  background-color: #7cb342;
+}
+
+.product-card__rating--4-5 {
+  background-color: #2e7d32;
 }
 
 .product-card__rating-icon {
@@ -240,14 +285,6 @@
   white-space: nowrap;
 }
 
-/* Hide Buy now on mobile — Add to cart is the single full-width CTA */
-.product-card__buy {
-  display: none;
-  width: 100%;
-  min-height: 2.5rem;
-  box-sizing: border-box;
-}
-
 /* Out of stock — single full-width tertiary CTA */
 .product-card__options {
   display: inline-flex;
@@ -268,6 +305,7 @@
     padding-block: 0;
     box-shadow: 0 2px 5px
       color-mix(in srgb, var(--color-secondary) 12%, transparent);
+    border-radius: 0.65rem;
   }
 
   .product-card__main {
@@ -339,27 +377,11 @@
   }
 
   .product-card__actions {
-    grid-template-columns: 1fr 1fr;
     margin-top: 0.5rem;
-  }
-
-  /* Keep See All Options as one full-width row on tablet+ */
-  .product-card__actions--oos {
-    grid-template-columns: 1fr;
   }
 
   .product-card__cart {
     min-height: 2.375rem;
-  }
-
-  .product-card__buy {
-    display: inline-flex;
-    justify-content: center;
-    min-width: 0;
-    min-height: 2.375rem;
-    padding: 0.5rem 0.85rem;
-    font-size: var(--font-size-sm);
-    white-space: nowrap;
   }
 
   .product-card__options {

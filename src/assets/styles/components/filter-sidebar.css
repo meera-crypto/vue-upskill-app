@@ -43,38 +43,61 @@
   cursor: pointer;
 }
 
-/* —— Active chips —— */
-
+/* —— Active chips ——
+ * Fixed one-row slot (never grows). Extra chips scroll horizontally so the
+ * product grid does not shift when filters are toggled.
+ */
 .filter-chips {
+  --filter-chips-row-height: 2rem;
+
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
-  margin: 0;
+  box-sizing: border-box;
+  height: var(--filter-chips-row-height);
+  margin: 0 0 1rem;
   min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.filter-chips--empty {
+  pointer-events: none;
 }
 
 .filter-chips__list {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
+  min-width: 0;
+}
+
+.filter-chips__item {
+  flex-shrink: 0;
 }
 
 .filter-chips__chip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.35rem 0.65rem;
+  box-sizing: border-box;
+  height: var(--filter-chips-row-height);
+  padding: 0 0.65rem;
   font-size: 0.8125rem;
   font-weight: 500;
+  line-height: 1;
   color: var(--color-primary);
   background: color-mix(in srgb, var(--color-primary) 8%, transparent);
   border: 1px solid var(--color-border);
   border-radius: 0.25rem;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .filter-chips__chip:hover {
@@ -88,15 +111,18 @@
 }
 
 .filter-chips__clear {
+  flex-shrink: 0;
   padding: 0;
   font-size: 0.8125rem;
   font-weight: 600;
+  line-height: 1;
   color: var(--color-primary);
   background: none;
   border: none;
   text-decoration: underline;
   text-underline-offset: 0.15em;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 /* —— Sidebar (base = off-canvas drawer below lg) —— */
@@ -134,9 +160,9 @@
 }
 
 .filter-sidebar__title {
-  margin: 0;
   font-size: var(--font-size-h6);
   line-height: var(--line-height-h6);
+  font-weight: 600;
 }
 
 .filter-sidebar__close {
@@ -302,6 +328,13 @@
   max-height: 11rem;
   overflow: auto;
   padding-inline-end: 0.25rem;
+}
+
+.filter-group__empty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--color-secondary) 72%, var(--color-neutral));
 }
 
 .filter-option {

@@ -2,20 +2,29 @@
 /**
  * Favorites page — products saved via the heart on product cards.
  *
- * Reuses ProductCard so Add to cart / Buy now / unfavorite behave the same
- * as on the listing. State comes from shared useFavorites + useCart.
+ * Reuses ProductCard so Add to cart / unfavorite behave the same as on the
+ * listing. State comes from shared useFavorites + useCart.
  */
+import { computed } from "vue";
 import { useRouter } from "vue-router";
+import Breadcrumbs from "@/components/Breadcrumbs.vue";
 import ProductCard from "@/components/ProductCard.vue";
 import { useCart } from "@/composables/useCart.js";
 import { useFavorites } from "@/composables/useFavorites.js";
 import { useToast } from "@/composables/useToast.js";
+import { productDetailsTo } from "@/utils/productRoutes.js";
 
 const router = useRouter();
 const toast = useToast();
-const { cartQuantities, addToCart, buyNow } = useCart();
+const { cartQuantities, addToCart } = useCart();
 const { favoriteProducts, favoriteIds, favoriteCount, toggleFavorite } =
   useFavorites();
+
+/** Products → Favorites (current page has no link). */
+const breadcrumbItems = computed(() => [
+  { label: "Products", to: { name: "products" } },
+  { label: "Favorites" },
+]);
 
 function productLabel(product) {
   return product?.title?.trim() || "Item";
@@ -27,15 +36,6 @@ function onAddToCart(product) {
   }
 }
 
-function onBuyNow(product) {
-  const wasNew = !cartQuantities.value[product.id];
-  if (!buyNow(product)) return;
-  if (wasNew) {
-    toast.success(`${productLabel(product)} added to cart`);
-  }
-  router.push({ name: "cart" });
-}
-
 function onGoToCart() {
   router.push({ name: "cart" });
 }
@@ -43,10 +43,15 @@ function onGoToCart() {
 function onToggleFavorite(product) {
   const result = toggleFavorite(product);
   if (result === "added") {
-    toast.info(`${productLabel(product)} added to favorites`);
+    toast.favorite(`${productLabel(product)} added to favorites`);
   } else if (result === "removed") {
-    toast.info(`${productLabel(product)} removed from favorites`);
+    toast.favorite(`${productLabel(product)} removed from favorites`);
   }
+}
+
+function onSeeAllOptions(product) {
+  if (!product?.id) return;
+  router.push(productDetailsTo(product));
 }
 
 function continueShopping() {
@@ -58,6 +63,8 @@ function continueShopping() {
   <!-- Header is in App.vue — shared across routes. -->
   <main class="favorites-page">
     <div class="container favorites-page__inner">
+      <Breadcrumbs :items="breadcrumbItems" />
+
       <header class="favorites-page__header">
         <h1 class="favorites-page__title">Favorites</h1>
         <p v-if="favoriteCount > 0" class="favorites-page__count">
@@ -92,8 +99,8 @@ function continueShopping() {
               :quantity="cartQuantities[product.id] ?? 0"
               @add-to-cart="onAddToCart"
               @go-to-cart="onGoToCart"
-              @buy-now="onBuyNow"
               @toggle-favorite="onToggleFavorite"
+              @see-all-options="onSeeAllOptions"
             />
           </li>
         </ul>
@@ -101,7 +108,7 @@ function continueShopping() {
         <div class="favorites-page__footer-actions">
           <button
             type="button"
-            class="btn btn--primary"
+            class="btn btn--secondary"
             @click="continueShopping"
           >
             Continue shopping
