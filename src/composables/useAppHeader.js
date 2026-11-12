@@ -75,6 +75,30 @@ export function useAppHeader() {
   }
 
   /**
+   * Header search is site-wide: as soon as the user types a query, drop the
+   * selected category so matches outside that category still appear.
+   * Other filters (brand, price, …) and sort stay. Clearing search does not
+   * restore the previous category.
+   *
+   * @param {string} next
+   */
+  function setQueryFromHeader(next) {
+    const trimmed = String(next ?? "").trim();
+    if (trimmed && isListing.value) {
+      const raw = route.query.category;
+      const hasCategory = raw != null && raw !== "";
+      if (hasCategory) {
+        /** @type {Record<string, string | string[]>} */
+        const nextQuery = { ...route.query };
+        delete nextQuery.category;
+        delete nextQuery.page;
+        router.replace({ query: nextQuery });
+      }
+    }
+    setQuery(next);
+  }
+
+  /**
    * @param {string} value category slug
    */
   function toggleCategory(value) {
@@ -105,7 +129,7 @@ export function useAppHeader() {
 
   return {
     searchQuery: query,
-    setQuery,
+    setQuery: setQueryFromHeader,
     clearSearch: onClearSearch,
     categories,
     selectedCategories,

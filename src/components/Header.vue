@@ -8,7 +8,8 @@
  * Search shows a product suggestions dropdown while typing (title / brand /
  * tags match; matched search text is highlighted). A View all row at the
  * bottom applies the typed query on the listing.
- * Categories sit under search and toggle the same `filters.categories` state
+ * Categories sit under search and sync via the listing URL (`?category=`).
+ * Starting a search clears the selected category (site-wide search UX).
  * used by the listing (removed from the filter sidebar).
  *
  * Mounted once from App.vue (useAppHeader). Cart / favorites counts come from

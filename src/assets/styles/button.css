@@ -67,3 +67,41 @@
   );
   color: color-mix(in srgb, var(--color-primary) 82%, var(--color-black));
 }
+
+/* Link — text-only, primary color (e.g. “View all” under card copy) */
+.btn--link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  width: fit-content;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: inherit;
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn--link:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  background: transparent;
+  border-color: transparent;
+}
+
+.btn--link:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}

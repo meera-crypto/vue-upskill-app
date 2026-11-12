@@ -55,6 +55,8 @@ const {
   clearFilters,
 } = useProductFilters(searchedProducts, catalog);
 
+const PAGE_SIZE = 12;
+
 const {
   page,
   total,
@@ -67,7 +69,7 @@ const {
   goToPage,
   next,
   prev,
-} = usePagination(filteredProducts, { pageSize: 12 });
+} = usePagination(filteredProducts, { pageSize: PAGE_SIZE });
 
 useListingQuerySync({
   appliedQuery,
@@ -80,13 +82,19 @@ useListingQuerySync({
 });
 
 /**
- * Below md (<768px): no pagination — show the full filtered list.
- * md+: keep 12-per-page pagination.
+ * Below md (<768px): show 12 products, then a Load more control (+12 each tap).
+ * md+: numbered pagination (12 per page).
  *
  * Uses shared `mediaQueries.untilMd` so JS matches CSS breakpoints.
  * A `ref` + matchMedia so Vue can change *data*, not just CSS layout.
+ *
+ * Mobile visible count is separate from URL `page` so Load more does not
+ * fight desktop page sync (page 2 on desktop = items 13–24; on mobile
+ * Load more = cumulative 1–24).
  */
 const isMobile = ref(false);
+/** How many products are revealed on mobile (grows by PAGE_SIZE). */
+const mobileVisibleCount = ref(PAGE_SIZE);
 /** @type {MediaQueryList | null} */
 let mobileMediaQuery = null;
 
@@ -104,11 +112,48 @@ onUnmounted(() => {
   mobileMediaQuery?.removeEventListener("change", syncIsMobile);
 });
 
-const displayedProducts = computed(() =>
-  isMobile.value ? filteredProducts.value : paginatedItems.value,
+/** New search/filter result set → show the first batch again. */
+watch(
+  () => {
+    const list = filteredProducts.value;
+    if (list.length === 0) return "0";
+    const first = list[0]?.id ?? "";
+    const last = list[list.length - 1]?.id ?? "";
+    return `${list.length}:${first}:${last}`;
+  },
+  () => {
+    mobileVisibleCount.value = PAGE_SIZE;
+  },
 );
 
+const displayedProducts = computed(() => {
+  if (isMobile.value) {
+    return filteredProducts.value.slice(0, mobileVisibleCount.value);
+  }
+  return paginatedItems.value;
+});
+
+/** Toolbar “Showing X–Y of Z” — cumulative on mobile, page slice on md+. */
+const displayRange = computed(() => {
+  if (!isMobile.value) return range.value;
+  if (total.value === 0) return { start: 0, end: 0 };
+  return {
+    start: 1,
+    end: Math.min(mobileVisibleCount.value, total.value),
+  };
+});
+
 const showPagination = computed(() => !isMobile.value);
+const showLoadMore = computed(
+  () => isMobile.value && mobileVisibleCount.value < total.value,
+);
+
+function loadMore() {
+  mobileVisibleCount.value = Math.min(
+    mobileVisibleCount.value + PAGE_SIZE,
+    total.value,
+  );
+}
 
 /** After a page change, bring the listing back into view (modern UX). */
 watch(page, async (nextPage, prevPage) => {
@@ -120,7 +165,6 @@ watch(page, async (nextPage, prevPage) => {
     block: "start",
   });
 });
-
 /**
  * Cart + favorites live in shared composables (module-scoped refs), so the
  * header badges and /cart + /favorites pages stay in sync with this listing.
@@ -135,9 +179,12 @@ function productLabel(product) {
   return product?.title?.trim() || "Item";
 }
 
-/** First add: quantity 1 when in stock. Qty +/- is on the cart page. */
-function addToCart(product) {
-  if (putInCart(product)) {
+/**
+ * First add: quantity 1 when in stock. Qty +/- is on the cart page.
+ * Optional `variant` comes from quick-view selection on the card.
+ */
+function addToCart(product, variant = null) {
+  if (putInCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
   }
 }
@@ -178,7 +225,7 @@ function onPriceMax(value) {
     <ProductList
       :products="displayedProducts"
       :total="total"
-      :range="range"
+      :range="displayRange"
       :search-query="query"
       :loading="loading"
       :error="error"
@@ -190,6 +237,7 @@ function onPriceMax(value) {
       :active-chips="activeChips"
       :has-active-filters="hasActiveFilters"
       :show-pagination="showPagination"
+      :show-load-more="showLoadMore"
       :page="page"
       :total-pages="totalPages"
       :page-items="pageItems"
@@ -214,6 +262,7 @@ function onPriceMax(value) {
       @page-prev="prev"
       @page-next="next"
       @go-to-page="goToPage"
+      @load-more="loadMore"
     />
 
     <!-- Optional: products opened on the details page (localStorage). -->

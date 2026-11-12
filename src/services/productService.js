@@ -5,8 +5,15 @@
  * Keeping fetch + mapping here (not in components) makes the API easy to swap
  * later and keeps Vue components focused on UI + state.
  *
+ * Variant note: if the API product already includes `options` + `variants`, we
+ * normalize those into our app shape. Otherwise selected DummyJSON ids get a
+ * local overlay from `productVariants.js` so the details page can practise
+ * selection today.
+ *
  * Docs: https://dummyjson.com/docs/products
  */
+
+import { PRODUCT_VARIANT_OVERLAYS } from "@/data/productVariants.js";
 
 const API_BASE = "https://dummyjson.com";
 
@@ -245,6 +252,28 @@ function mapDummyProduct(raw) {
     ? raw.tags.filter((tag) => typeof tag === "string" && tag.trim())
     : [];
 
+  /**
+   * Variants: prefer API payload when present; else local overlay by id.
+   * PDP / cart only care about the normalized `options` + `variants` shape.
+   */
+  const { options, variants, stock: variantStock, colors: variantColors } =
+    resolveProductVariants(raw, images);
+
+  const apiColors = normalizeColorList(raw.colors);
+  const mappedColors =
+    apiColors.length > 0
+      ? apiColors
+      : variantColors.length > 0
+        ? variantColors
+        : extractColors(title, description);
+
+  const mappedStock =
+    variants.length > 0
+      ? variantStock
+      : Number.isFinite(stock) && stock > 0
+        ? stock
+        : 0;
+
   return {
     id: raw.id,
     title,
@@ -263,13 +292,16 @@ function mapDummyProduct(raw) {
     /** Used by Best Seller sort (DummyJSON proxy — see comment above). */
     salesCount,
     createdAt,
-    stock: Number.isFinite(stock) && stock > 0 ? stock : 0,
+    stock: mappedStock,
     images: images.length > 0 ? images : [PRODUCT_IMAGE_FALLBACK],
     /** Primary (larger) image for cards / tablet+. */
     image,
     /** Prefer for narrow viewports via <picture> <source>. */
     thumbnail,
-    colors: extractColors(title, description),
+    colors: mappedColors,
+    /** From API variants when present; otherwise local overlay (or empty). */
+    options,
+    variants,
     isFeatured,
     /** Detail-page extras from DummyJSON (safe empty defaults for listing). */
     reviews,
@@ -290,6 +322,272 @@ function mapDummyProduct(raw) {
         ? raw.availabilityStatus
         : "",
   };
+}
+
+/**
+ * Choose a variant source: API fields first, then local overlay by id.
+ * @param {Record<string, unknown>} raw
+ * @param {string[]} images
+ */
+function resolveProductVariants(raw, images) {
+  const fromApi = normalizeVariantSource(
+    {
+      options: raw.options,
+      variants: raw.variants,
+    },
+    images,
+  );
+  if (fromApi.variants.length > 0) return fromApi;
+
+  const overlay = PRODUCT_VARIANT_OVERLAYS[Number(raw.id)];
+  return normalizeVariantSource(overlay, images);
+}
+
+/**
+ * Normalize API or local `{ options, variants }` into the app variant shape.
+ * Accepts a few common aliases so a future API swap is less brittle.
+ *
+ * @param {{ options?: unknown, variants?: unknown } | null | undefined} source
+ * @param {string[]} images
+ */
+function normalizeVariantSource(source, images) {
+  if (!source || typeof source !== "object") {
+    return { options: [], variants: [], stock: 0, colors: [] };
+  }
+
+  const variants = normalizeVariants(source.variants, images);
+  if (variants.length === 0) {
+    return { options: [], variants: [], stock: 0, colors: [] };
+  }
+
+  let options = normalizeOptions(source.options);
+  if (options.length === 0) {
+    options = deriveOptionsFromVariants(variants);
+  }
+
+  const stockTotal = variants.reduce((sum, variant) => sum + variant.stock, 0);
+  const colors = colorsFromOptions(options);
+
+  return { options, variants, stock: stockTotal, colors };
+}
+
+/**
+ * @param {unknown} rawOptions
+ * @returns {{ name: string, values: string[] }[]}
+ */
+function normalizeOptions(rawOptions) {
+  if (!Array.isArray(rawOptions)) return [];
+
+  return rawOptions
+    .map((option) => {
+      if (!option || typeof option !== "object") return null;
+      const entry = /** @type {Record<string, unknown>} */ (option);
+      const name =
+        typeof entry.name === "string"
+          ? entry.name.trim()
+          : typeof entry.title === "string"
+            ? entry.title.trim()
+            : "";
+      if (!name) return null;
+
+      /** Support `{ values: string[] }` and Shopify-like `{ optionValues: [{ name }] }`. */
+      let values = [];
+      if (Array.isArray(entry.values)) {
+        values = entry.values
+          .map((value) => {
+            if (typeof value === "string") return value.trim();
+            if (value && typeof value === "object" && "name" in value) {
+              return String(
+                /** @type {{ name?: unknown }} */ (value).name ?? "",
+              ).trim();
+            }
+            return "";
+          })
+          .filter(Boolean);
+      } else if (Array.isArray(entry.optionValues)) {
+        values = entry.optionValues
+          .map((value) => {
+            if (!value || typeof value !== "object") return "";
+            return String(
+              /** @type {{ name?: unknown }} */ (value).name ?? "",
+            ).trim();
+          })
+          .filter(Boolean);
+      }
+
+      if (values.length === 0) return null;
+      return { name, values: [...new Set(values)] };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * @param {unknown} rawVariants
+ * @param {string[]} images
+ */
+function normalizeVariants(rawVariants, images) {
+  if (!Array.isArray(rawVariants)) return [];
+
+  return rawVariants
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const variant = /** @type {Record<string, unknown>} */ (entry);
+      const id = variant.id != null ? String(variant.id) : "";
+      if (!id) return null;
+
+      const price = Number(variant.price);
+      const stock = readVariantStock(variant);
+      const imageIndex = Number(variant.imageIndex);
+      const explicitImage =
+        typeof variant.image === "string" && variant.image.trim()
+          ? variant.image.trim()
+          : typeof variant.imageUrl === "string" && variant.imageUrl.trim()
+            ? variant.imageUrl.trim()
+            : "";
+      const imageFromIndex =
+        Number.isFinite(imageIndex) && imageIndex >= 0 && images[imageIndex]
+          ? images[imageIndex]
+          : "";
+      const image = explicitImage || imageFromIndex || undefined;
+
+      const optionMap = normalizeVariantOptionMap(variant);
+
+      return {
+        id,
+        sku: typeof variant.sku === "string" ? variant.sku : "",
+        options: optionMap,
+        price: Number.isFinite(price) && price >= 0 ? price : 0,
+        stock: Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0,
+        ...(image ? { image } : {}),
+        ...(Number.isFinite(imageIndex) && imageIndex >= 0
+          ? { imageIndex: Math.floor(imageIndex) }
+          : {}),
+      };
+    })
+    .filter(Boolean);
+}
+
+/**
+ * Build `{ Color: "Blue", Size: "M" }` from several common API shapes.
+ * @param {Record<string, unknown>} variant
+ * @returns {Record<string, string>}
+ */
+function normalizeVariantOptionMap(variant) {
+  const direct =
+    (variant.options && typeof variant.options === "object"
+      ? variant.options
+      : null) ||
+    (variant.selectedOptions && typeof variant.selectedOptions === "object"
+      ? variant.selectedOptions
+      : null);
+
+  if (direct && !Array.isArray(direct)) {
+    /** @type {Record<string, string>} */
+    const map = {};
+    for (const [key, value] of Object.entries(direct)) {
+      if (value == null || value === "") continue;
+      map[String(key)] = String(value);
+    }
+    return map;
+  }
+
+  /** Shopify-like: `selectedOptions: [{ name, value }, …]` */
+  if (Array.isArray(variant.selectedOptions)) {
+    /** @type {Record<string, string>} */
+    const map = {};
+    for (const entry of variant.selectedOptions) {
+      if (!entry || typeof entry !== "object") continue;
+      const row = /** @type {Record<string, unknown>} */ (entry);
+      const name = typeof row.name === "string" ? row.name.trim() : "";
+      const value =
+        row.value != null
+          ? String(row.value).trim()
+          : row.optionValue != null
+            ? String(row.optionValue).trim()
+            : "";
+      if (name && value) map[name] = value;
+    }
+    return map;
+  }
+
+  return {};
+}
+
+/**
+ * @param {Record<string, unknown>} variant
+ * @returns {number}
+ */
+function readVariantStock(variant) {
+  const candidates = [
+    variant.stock,
+    variant.inventoryQuantity,
+    variant.inventory_quantity,
+    variant.quantity,
+  ];
+  for (const candidate of candidates) {
+    const n = Number(candidate);
+    if (Number.isFinite(n)) return n;
+  }
+  return 0;
+}
+
+/**
+ * If the API only sends variants, rebuild option groups from their maps.
+ * @param {{ options: Record<string, string> }[]} variants
+ * @returns {{ name: string, values: string[] }[]}
+ */
+function deriveOptionsFromVariants(variants) {
+  /** @type {Map<string, Set<string>>} */
+  const byName = new Map();
+
+  for (const variant of variants) {
+    const opts = variant?.options;
+    if (!opts || typeof opts !== "object") continue;
+    for (const [name, value] of Object.entries(opts)) {
+      if (!name || value == null || value === "") continue;
+      if (!byName.has(name)) byName.set(name, new Set());
+      byName.get(name)?.add(String(value));
+    }
+  }
+
+  return [...byName.entries()].map(([name, values]) => ({
+    name,
+    values: [...values],
+  }));
+}
+
+/**
+ * @param {{ name: string, values: string[] }[]} options
+ * @returns {string[]}
+ */
+function colorsFromOptions(options) {
+  const colorOption = options.find(
+    (option) => option.name.toLowerCase() === "color",
+  );
+  if (!colorOption) return [];
+  return [
+    ...new Set(
+      colorOption.values
+        .map((value) => String(value).trim().toLowerCase())
+        .filter((value) => value && KNOWN_COLORS.includes(value)),
+    ),
+  ];
+}
+
+/**
+ * Normalize an API `colors` array into lowercase filter tokens.
+ * @param {unknown} rawColors
+ * @returns {string[]}
+ */
+function normalizeColorList(rawColors) {
+  if (!Array.isArray(rawColors)) return [];
+  return [
+    ...new Set(
+      rawColors
+        .map((value) => String(value ?? "").trim().toLowerCase())
+        .filter((value) => value && KNOWN_COLORS.includes(value)),
+    ),
+  ];
 }
 
 /**

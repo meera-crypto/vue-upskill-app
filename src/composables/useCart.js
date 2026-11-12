@@ -8,8 +8,17 @@
  * We store a product snapshot + quantity so the cart page can render
  * without re-fetching the catalog. localStorage keeps the cart after refresh
  * (product-listing requirements §7 — Persistent cart).
+ *
+ * Variants: when a product has size/color choices, each selected variant is
+ * its own cart line (keyed by variant id). Quick-view / details should pass
+ * the chosen variant; if none is passed, the first in-stock variant is used.
  */
 import { ref, computed } from "vue";
+import {
+  cartLineKey,
+  productHasVariants,
+  resolveVariantForAdd,
+} from "@/utils/variants.js";
 
 const STORAGE_KEY = "mercantile-cart";
 
@@ -61,16 +70,52 @@ function persist() {
   }
 }
 
+/**
+ * Build the snapshot stored on a cart line (variant fields override parent).
+ * @param {Record<string, unknown>} product
+ * @param {Record<string, unknown> | null} variant
+ */
+function buildLineProduct(product, variant) {
+  const stock = variant
+    ? Number(variant.stock)
+    : Number(product.stock);
+  const max = Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0;
+
+  const {
+    variants: _variants,
+    options: _options,
+    reviews: _reviews,
+    ...rest
+  } = product;
+
+  return {
+    ...rest,
+    price: variant?.price ?? product.price,
+    stock: max,
+    image: variant?.image ?? product.image,
+    sku: (variant?.sku || product.sku || ""),
+    variantId: variant?.id ?? null,
+    selectedOptions:
+      variant?.options && typeof variant.options === "object"
+        ? { ...variant.options }
+        : null,
+  };
+}
+
 /** Total units in the cart (sum of quantities). */
 const cartCount = computed(() =>
   Object.values(items.value).reduce((sum, line) => sum + line.quantity, 0),
 );
 
-/** Cart lines as an array (stable order by product id). */
+/** Cart lines as an array (stable order by product id, then line key). */
 const cartLines = computed(() =>
-  Object.values(items.value).sort(
-    (a, b) => Number(a.product.id) - Number(b.product.id),
-  ),
+  Object.entries(items.value)
+    .map(([key, line]) => ({ key, ...line }))
+    .sort((a, b) => {
+      const byProduct = Number(a.product.id) - Number(b.product.id);
+      if (byProduct !== 0) return byProduct;
+      return String(a.key).localeCompare(String(b.key));
+    }),
 );
 
 /** Sum of price × quantity for every line. */
@@ -83,45 +128,55 @@ const cartSubtotal = computed(() =>
 );
 
 /**
- * @param {number|string} productId
+ * Quantity for one cart line key (variant id or product id).
+ * @param {number|string} lineKey
  * @returns {number}
  */
-function getQuantity(productId) {
-  return items.value[productId]?.quantity ?? 0;
+function getQuantity(lineKey) {
+  return items.value[lineKey]?.quantity ?? 0;
 }
 
 /**
- * @param {number|string} productId
+ * @param {number|string} lineKey
  * @returns {boolean}
  */
-function isInCart(productId) {
-  return getQuantity(productId) > 0;
+function isInCart(lineKey) {
+  return getQuantity(lineKey) > 0;
 }
 
 /**
  * First add sets quantity (default 1). Listing cards then show “Go to cart”
- * instead of bumping qty. Details can pass a dropdown/custom qty;
+ * instead of bumping qty. Details can pass a dropdown/custom qty + variant;
  * cart page still owns later +/- updates.
  *
  * @param {Record<string, unknown>} product
  * @param {number} [quantity]
- * @returns {boolean} true when the product was newly added
+ * @param {Record<string, unknown> | null} [variant]
+ * @returns {boolean} true when the line was newly added
  */
-function addToCart(product, quantity = 1) {
-  if (!product || (product.stock ?? 0) <= 0) return false;
+function addToCart(product, quantity = 1, variant = null) {
+  if (!product || product.id == null) return false;
 
-  const id = product.id;
-  if (id == null) return false;
+  let resolved = null;
+  if (productHasVariants(product)) {
+    resolved = resolveVariantForAdd(product, variant);
+    if (!resolved || (Number(resolved.stock) || 0) <= 0) return false;
+  } else if ((product.stock ?? 0) <= 0) {
+    return false;
+  }
 
-  if (items.value[id]) return false;
+  const key = cartLineKey(product, resolved);
+  if (!key || items.value[key]) return false;
 
-  const stock = Number(product.stock);
-  const max = Number.isFinite(stock) && stock > 0 ? stock : 1;
+  const lineProduct = buildLineProduct(product, resolved);
+  if ((lineProduct.stock ?? 0) <= 0) return false;
+
+  const max = lineProduct.stock;
   const qty = Math.min(max, Math.max(1, Math.floor(Number(quantity) || 1)));
 
   items.value = {
     ...items.value,
-    [id]: { product: { ...product }, quantity: qty },
+    [key]: { product: lineProduct, quantity: qty },
   };
   persist();
   return true;
@@ -132,22 +187,33 @@ function addToCart(product, quantity = 1) {
  * Caller navigates to the cart route.
  *
  * @param {Record<string, unknown>} product
+ * @param {Record<string, unknown> | null} [variant]
  * @returns {boolean} true when the product can proceed to cart
  */
-function buyNow(product) {
-  if (!product || (product.stock ?? 0) <= 0) return false;
-  if (!isInCart(product.id)) {
-    return addToCart(product);
+function buyNow(product, variant = null) {
+  if (!product) return false;
+
+  let resolved = null;
+  if (productHasVariants(product)) {
+    resolved = resolveVariantForAdd(product, variant);
+    if (!resolved || (Number(resolved.stock) || 0) <= 0) return false;
+  } else if ((product.stock ?? 0) <= 0) {
+    return false;
+  }
+
+  const key = cartLineKey(product, resolved);
+  if (!isInCart(key)) {
+    return addToCart(product, 1, resolved);
   }
   return true;
 }
 
 /**
- * @param {number|string} productId
+ * @param {number|string} lineKey
  * @param {number} quantity
  */
-function setQuantity(productId, quantity) {
-  const line = items.value[productId];
+function setQuantity(lineKey, quantity) {
+  const line = items.value[lineKey];
   if (!line) return;
 
   const stock = Number(line.product.stock);
@@ -155,36 +221,36 @@ function setQuantity(productId, quantity) {
   const next = Math.min(max, Math.max(0, Math.floor(Number(quantity) || 0)));
 
   if (next < 1) {
-    removeFromCart(productId);
+    removeFromCart(lineKey);
     return;
   }
 
   items.value = {
     ...items.value,
-    [productId]: { ...line, quantity: next },
+    [lineKey]: { ...line, quantity: next },
   };
   persist();
 }
 
-/** @param {number|string} productId */
-function increment(productId) {
-  const line = items.value[productId];
+/** @param {number|string} lineKey */
+function increment(lineKey) {
+  const line = items.value[lineKey];
   if (!line) return;
-  setQuantity(productId, line.quantity + 1);
+  setQuantity(lineKey, line.quantity + 1);
 }
 
-/** @param {number|string} productId */
-function decrement(productId) {
-  const line = items.value[productId];
+/** @param {number|string} lineKey */
+function decrement(lineKey) {
+  const line = items.value[lineKey];
   if (!line) return;
-  setQuantity(productId, line.quantity - 1);
+  setQuantity(lineKey, line.quantity - 1);
 }
 
-/** @param {number|string} productId */
-function removeFromCart(productId) {
-  if (!items.value[productId]) return;
+/** @param {number|string} lineKey */
+function removeFromCart(lineKey) {
+  if (!items.value[lineKey]) return;
   const next = { ...items.value };
-  delete next[productId];
+  delete next[lineKey];
   items.value = next;
   persist();
 }
@@ -196,12 +262,15 @@ function clearCart() {
 
 /**
  * Shape ProductList / ProductCard expect: `{ [productId]: quantity }`.
+ * Sums quantities across every variant line of the same product so cards
+ * still show “Go to cart” after any variant was added.
  */
 const cartQuantities = computed(() => {
   /** @type {Record<string, number>} */
   const map = {};
-  for (const [id, line] of Object.entries(items.value)) {
-    map[id] = line.quantity;
+  for (const line of Object.values(items.value)) {
+    const productId = String(line.product.id);
+    map[productId] = (map[productId] ?? 0) + line.quantity;
   }
   return map;
 });
