@@ -30,8 +30,8 @@ function productLabel(product) {
   return product?.title?.trim() || "Item";
 }
 
-function onAddToCart(product) {
-  if (addToCart(product)) {
+function onAddToCart(product, variant = null) {
+  if (addToCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
   }
 }

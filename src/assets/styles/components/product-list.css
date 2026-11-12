@@ -169,6 +169,16 @@
   min-width: 0;
 }
 
+.product-list__load-more {
+  display: flex;
+  justify-content: center;
+  margin-block-start: 1.5rem;
+}
+
+.product-list__load-more-btn {
+  min-width: 10rem;
+}
+
 /* md (768px) — tablet: 2 columns */
 @media (min-width: 768px) {
   .product-list__grid {

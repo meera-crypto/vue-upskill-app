@@ -25,7 +25,7 @@ Recommended page sections, from top to bottom:
    - Tablet+ (≥768px): search centered in the header; icons inline in the header bar.
 2. Breadcrumb navigation (shared `Breadcrumbs` on details, favorites, and cart; listing is the catalog root).
 3. Category title / hero banner — tablet+ only; hidden on mobile.
-4. Search within the current category (header search on tablet+).
+4. Site-wide header search (tablet+ in the header bar; mobile under the logo). Searching clears any selected category so matches are not limited to that category.
 5. Product listing toolbar: result count and sorting control.
 6. Filter sidebar on desktop; filter drawer or bottom sheet on mobile.
 7. Active filter chips with individual remove actions and a Clear All action.
@@ -47,7 +47,7 @@ Recommended page sections, from top to bottom:
 | Availability            | Indicate in-stock/out-of-stock state.            | Disable or replace Add to Cart when unavailable.    |
 | Wishlist                | Toggle saved state.                              | Use a clear label/state and accessible button name. |
 | Add to Cart             | Add eligible item and update cart count.         | Show success/error feedback.                        |
-| Quick View/variants     | Optional modal and variant selection.            | Validate variant before adding to cart.             |
+| Quick View/variants     | Variant products: on desktop hover an options strip appears over the product image (same hover as image zoom; no layout shift). Users can select options there and Add to cart without opening details. Mobile shows a primary “View all” link under the description. | Validate selected variant before adding (card quick view or details). |
 
 ### 3.2 Search
 
@@ -57,7 +57,8 @@ Recommended page sections, from top to bottom:
 - Suggestions include a View all action at the bottom that applies the typed query on the listing; keyboard arrows reach every suggestion (including those below the fold) and View all.
 - Provide a clear-search action and display the result count.
 - Debounce API-backed search by approximately 250–350 ms.
-- Keep current filters and sort selection when the search changes, unless product requirements say otherwise.
+- Header search is site-wide: when the user applies a non-empty search query, clear the selected category (and its URL/`category` chip) so results are not limited to that category. Keep other filters (brand, price, rating, stock, color, discount) and sort. Clearing search does not restore the previous category.
+- Keep other current filters and sort when the search changes.
 - Show a useful no-results state and allow users to clear the query.
 - Prevent stale responses from replacing newer results; use AbortController for obsolete requests.
 
@@ -98,17 +99,19 @@ Sorting must not clear filters or search. Changing filters/search should reset p
 
 ### 3.5 Pagination
 
-- Start with 12 products per page.
-- Show current page, total pages, and result range.
-- Disable Previous on the first page and Next on the last page.
-- Preserve search, filters, and sort while navigating pages.
-- Reset to page 1 after a search/filter change.
+- Start with 12 products per page (or batch).
+- **Tablet / desktop (md+):** numbered pagination — show current page, total pages, and result range; disable Previous on the first page and Next on the last page.
+- **Mobile (below md):** Load more control — show the first 12 products, then reveal 12 more on each tap; toolbar shows the cumulative range (e.g. Showing 1–24 of 194). Hide Load more when all matches are visible.
+- Preserve search, filters, and sort while navigating pages or loading more.
+- Reset to page 1 (and reset the mobile visible batch to 12) after a search/filter change.
 - Handle pages that become invalid after the result set changes.
 - For client-side processing, use this order: **Search → Filter → Sort → Paginate**. With server-side processing, the API should apply equivalent logic and return page metadata.
 
 ## 4. Dummy API and Data Contract
 
 Recommended starting point: [DummyJSON Products API](https://dummyjson.com/docs/products). It provides sample products and supports basic listing, search, and pagination. Its response and capabilities may not match every custom field or filter needed; map the data or supplement it with local mock data.
+
+**Variants:** `productService` normalizes `options` + `variants` from the API when present (including common aliases like `selectedOptions`, `inventoryQuantity`). If the API product has no variants, selected DummyJSON ids fall back to a local overlay from `src/data/productVariants.js`. Product-level `stock` becomes the sum of variant stocks; listing color filters prefer an API `colors` array, then Color option values, then title/description extraction.
 
 ### Example endpoints
 
@@ -131,7 +134,20 @@ Recommended starting point: [DummyJSON Products API](https://dummyjson.com/docs/
   "reviewCount": 128,
   "stock": 15,
   "images": ["/images/headphones-black.webp"],
-  "colors": ["Black", "White", "Blue"],
+  "colors": ["black", "white", "blue"],
+  "options": [
+    { "name": "Color", "values": ["Black", "White", "Blue"] },
+    { "name": "Size", "values": ["S", "M", "L"] }
+  ],
+  "variants": [
+    {
+      "id": "101-black-m",
+      "sku": "HP-BLK-M",
+      "options": { "Color": "Black", "Size": "M" },
+      "price": 79.99,
+      "stock": 4
+    }
+  ],
   "isFeatured": true
 }
 ```
@@ -182,9 +198,12 @@ src/
 
 - Path: `/product?id=101&slug=wireless-headphones-pro` (route name `product-details`).
 - `id` is required and drives the fetch; `slug` is optional readable text and is filled in when the product loads.
+- Variant picks from card quick view are passed as `opts` (and `variant` when complete), e.g. `/product?id=83&slug=…&opts=Color%3ABlue%7CSize%3AM&variant=83-blue-m`. The details page hydrates `selectedOptions` from those query params and keeps them in sync when the user changes options.
 - Old `/products/:id` URLs redirect to `/product?id=…` (slug is added after load).
 - Loads one product via DummyJSON `GET /products/:id` (see `fetchProductById` / `useProductDetail`).
 - Shows gallery, price/discount, stock, description, quantity stepper (− / typed input / +), Add to cart beside the stepper (label stays “Add to cart”; each click adds the selected qty to the cart, capped by stock), full-width Buy now below, favorites, and reviews when present.
+- Gallery main image (Amazon-style zoom): on desktop (hover-capable pointers), a translucent square lens follows the cursor on the stage and a large zoomed preview panel appears to the right (overlaying the info column), showing the region under the lens. Touch / coarse pointers keep the plain gallery (no sticky lens or panel).
+- When `options` / `variants` exist (local overlay): show option pickers (swatches for Color when a hex is known; chips otherwise). Require a complete, in-stock selection before Add to cart / Buy now. Price, SKU, qty max, and gallery frame follow the active variant. Incomplete or OOS combinations show a clear hint and keep the primary actions disabled.
 - Similar products (below reviews): horizontally scrollable row of products in the same category, ranked by shared brand and tags (`getSimilarProducts`). Show up to 8 cards; when more exist, a View all control opens the listing with the matching category (or brand) filter applied.
 - Recently viewed: opening a product details page records a product snapshot (newest first, max 8, deduped) in `localStorage` via `useRecentlyViewed`. Show a horizontal row on the listing (below the grid) and on details (below Similar, excluding the current product). Hide the section when empty. Cart / favorite actions on those cards use the same shared composables as the listing.
 - Listing cards link image + title to details; out-of-stock “See All Options” opens the same page.
@@ -213,7 +232,7 @@ Vue guide: https://vuejs.org/guide/introduction.html
 - Use a shared mobile-first breakpoint scale (`md` / `lg` / `xl`). See below.
 - Desktop (lg+): sticky sidebar filters; three-column grid (four from xl).
 - Tablet (md): two-column grid and compact controls; filter drawer until lg.
-- Mobile (below md): one-column list cards, touch-friendly controls, filter drawer, bottom nav.
+- Mobile (below md): one-column list cards, touch-friendly controls, filter drawer, bottom nav, Load more (12 at a time).
 - Do not rely on hover-only interactions; mobile users need visible, accessible controls.
 - Avoid horizontal overflow and keep product names/prices readable.
 
@@ -250,7 +269,7 @@ WCAG 2.2: https://www.w3.org/TR/WCAG22/
 | Quick View           | Preview without leaving listing          | Medium   |
 | Product comparison   | Compare specifications                   | Medium   |
 | Recently viewed      | Return to previously explored products (`useRecentlyViewed` + listing/details row) | Medium (done) |
-| Variant selection    | Choose color/size before adding          | Medium   |
+| Variant selection    | Choose color/size before adding (API/local overlay + PDP pickers + variant cart lines; listing card hover preview + mobile View all) | Medium (done) |
 | Back-in-stock alerts | Express interest in unavailable products | Advanced |
 
 Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=100&inStock=1&sort=price-asc&page=2` (also accepts `/products?…`). Implemented via Vue Router + `useListingQuerySync`: search, filters (including Availability → In stock), sort, and page restore after refresh and stay shareable/bookmarkable.
@@ -269,7 +288,7 @@ Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=10
 | Rapid search changes            | Prevent stale responses from overwriting current results.         |
 | Repeated Add to Cart            | Details page: each click adds the selected qty (stock-capped). Listing cards: first add, then “Go to cart”. |
 | Zero price                      | Display 0 correctly; do not treat it as missing.                  |
-| Variants required               | Validate selected variant before adding to cart.                  |
+| Variants required               | Details and card quick view: validate selected variant before adding. If a card/add path passes no variant, auto-pick the first in-stock SKU. Cart lines are keyed by variant id (or product id when there are no variants) and show selected options. |
 | Refresh                         | Restore URL state and persisted cart if implemented.              |
 
 ## 9. Implementation Phases
@@ -306,7 +325,7 @@ Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=10
 - [ ] Every implemented sort option works.
 - [ ] Pagination displays the correct products.
 - [ ] Previous/Next controls work and disable correctly.
-- [ ] Changing search/filters resets pagination appropriately.
+- [ ] Changing search/filters resets pagination appropriately (page 1 on md+; first 12 on mobile Load more).
 
 ### Shopping interactions
 
@@ -314,6 +333,8 @@ Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=10
 - [ ] Add to Cart updates cart count.
 - [ ] Quantity updates follow defined rules.
 - [ ] Out-of-stock products cannot be added.
+- [ ] Products with variants require a valid selection on the details page before add/buy.
+- [ ] Different variants of the same product appear as separate cart lines with option labels.
 - [ ] Feedback is visible and understandable.
 
 ### Technical quality

@@ -6,6 +6,7 @@
  * - useCart() reads the same module-scoped state as the listing page
  * - useRouter() navigates “Continue shopping” back to products
  * - Quantity +/- updates reactive state; computed subtotal recalculates
+ * - Variant lines use `line.key` (variant id), not only product.id
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
@@ -15,6 +16,7 @@ import { useCart } from "@/composables/useCart.js";
 import { useToast } from "@/composables/useToast.js";
 import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
+import { formatSelectedOptions } from "@/utils/variants.js";
 
 const router = useRouter();
 const toast = useToast();
@@ -38,9 +40,13 @@ function productLabel(product) {
   return product?.title?.trim() || "Item";
 }
 
-function onRemove(product) {
-  removeFromCart(product.id);
-  toast.info(`${productLabel(product)} removed from cart`);
+function lineOptionsLabel(product) {
+  return formatSelectedOptions(product?.selectedOptions);
+}
+
+function onRemove(line) {
+  removeFromCart(line.key);
+  toast.info(`${productLabel(line.product)} removed from cart`);
 }
 
 function onClear() {
@@ -92,7 +98,7 @@ function lineMax(product) {
         <ul class="cart-page__list" aria-label="Cart items">
           <li
             v-for="line in cartLines"
-            :key="line.product.id"
+            :key="line.key"
             class="cart-line"
           >
             <div class="cart-line__media">
@@ -118,11 +124,21 @@ function lineMax(product) {
                 <h2 class="cart-line__title">
                   <RouterLink
                     class="cart-line__title-link"
-                    :to="productDetailsTo(line.product)"
+                    :to="
+                      productDetailsTo(line.product, {
+                        selectedOptions: line.product.selectedOptions,
+                      })
+                    "
                   >
                     {{ productLabel(line.product) }}
                   </RouterLink>
                 </h2>
+                <p
+                  v-if="lineOptionsLabel(line.product)"
+                  class="cart-line__variant"
+                >
+                  {{ lineOptionsLabel(line.product) }}
+                </p>
                 <p class="cart-line__price">
                   ${{ Number(line.product.price).toFixed(2) }}
                 </p>
@@ -139,7 +155,7 @@ function lineMax(product) {
                     class="cart-line__qty-btn"
                     aria-label="Decrease quantity"
                     :disabled="line.quantity <= 0"
-                    @click="decrement(line.product.id)"
+                    @click="decrement(line.key)"
                   >
                     <Minus :size="16" aria-hidden="true" />
                   </button>
@@ -151,7 +167,7 @@ function lineMax(product) {
                     class="cart-line__qty-btn"
                     aria-label="Increase quantity"
                     :disabled="line.quantity >= lineMax(line.product)"
-                    @click="increment(line.product.id)"
+                    @click="increment(line.key)"
                   >
                     <Plus :size="16" aria-hidden="true" />
                   </button>
@@ -165,7 +181,7 @@ function lineMax(product) {
                   type="button"
                   class="cart-line__remove"
                   :aria-label="`Remove ${productLabel(line.product)}`"
-                  @click="onRemove(line.product)"
+                  @click="onRemove(line)"
                 >
                   <Trash2 :size="18" aria-hidden="true" />
                   <span>Remove</span>

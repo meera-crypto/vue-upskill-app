@@ -75,10 +75,15 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  /** False on mobile — full list, no page controls. */
+  /** md+: numbered page controls. False on mobile (Load more instead). */
   showPagination: {
     type: Boolean,
     default: true,
+  },
+  /** Mobile: reveal the next batch of products. */
+  showLoadMore: {
+    type: Boolean,
+    default: false,
   },
   page: {
     type: Number,
@@ -122,8 +127,8 @@ const emit = defineEmits([
   "page-prev",
   "page-next",
   "go-to-page",
+  "load-more",
 ]);
-
 /** Mobile filter drawer open/closed. */
 const filtersOpen = ref(false);
 
@@ -154,18 +159,12 @@ function quantityFor(productId) {
 
 /**
  * Result range for the toolbar summary.
- * With pagination: current page slice. Without (mobile full list): 1–total.
+ * Parent passes the current page slice (md+) or cumulative Load more range (mobile).
  */
-const summaryRange = computed(() => {
-  if (props.showPagination) {
-    return { start: props.range.start, end: props.range.end };
-  }
-  return {
-    start: props.total > 0 ? 1 : 0,
-    end: props.total,
-  };
-});
-
+const summaryRange = computed(() => ({
+  start: props.range.start,
+  end: props.range.end,
+}));
 const showResultSummary = computed(
   () => !props.loading && !props.error && props.total > 0,
 );
@@ -337,7 +336,10 @@ const showResultSummary = computed(
                   :product="product"
                   :favorited="isFavorite(product.id)"
                   :quantity="quantityFor(product.id)"
-                  @add-to-cart="emit('add-to-cart', $event)"
+                  @add-to-cart="
+                    (product, variant) =>
+                      emit('add-to-cart', product, variant)
+                  "
                   @go-to-cart="emit('go-to-cart', $event)"
                   @toggle-favorite="emit('toggle-favorite', $event)"
                   @see-all-options="emit('see-all-options', $event)"
@@ -356,6 +358,16 @@ const showResultSummary = computed(
               @next="emit('page-next')"
               @go-to-page="emit('go-to-page', $event)"
             />
+
+            <div v-if="showLoadMore" class="product-list__load-more">
+              <button
+                type="button"
+                class="btn btn--tertiary product-list__load-more-btn"
+                @click="emit('load-more')"
+              >
+                Load more
+              </button>
+            </div>
           </template>
         </div>
       </div>
