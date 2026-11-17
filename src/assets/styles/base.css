@@ -19,3 +19,35 @@ select,
 textarea {
   font-family: inherit;
 }
+
+/*
+ * Skip link — off-screen until focused, then fixed at the top so keyboard
+ * users can bypass repeated header/nav chrome (WCAG 2.4.1 Bypass Blocks).
+ */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 10000;
+  padding: 0.75rem 1rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-soft-white);
+  background-color: var(--color-secondary);
+  border-radius: 0.25rem;
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 2px solid var(--color-soft-white);
+  outline-offset: 2px;
+}
+
+/* Landmark receives focus after skip; not an interactive control */
+#main-content:focus {
+  outline: none;
+}

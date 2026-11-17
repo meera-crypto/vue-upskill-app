@@ -7,8 +7,7 @@
  * - items with `to` render as RouterLink; the last item is the current page
  * - Parents build the trail; this component only renders it
  *
- * Example:
- *   [{ label: 'Products', to: { name: 'products' } }, { label: 'Cart' }]
+ *
  */
 defineProps({
   items: {

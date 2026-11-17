@@ -10,10 +10,10 @@
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import ProductCard from "@/components/ProductCard.vue";
-import ProductCarousel from "@/components/ProductCarousel.vue";
+import ProductCard from "@/components/product/ProductCard.vue";
+import ProductCarousel from "@/components/product/ProductCarousel.vue";
 import { useCart } from "@/composables/useCart.js";
-import { useFavorites } from "@/composables/useFavorites.js";
+import { useWishlist } from "@/composables/useWishlist.js";
 import { useRecentlyViewed } from "@/composables/useRecentlyViewed.js";
 import { useToast } from "@/composables/useToast.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
@@ -34,7 +34,7 @@ const props = defineProps({
 const router = useRouter();
 const toast = useToast();
 const { cartQuantities, addToCart } = useCart();
-const { isFavorite, toggleFavorite } = useFavorites();
+const { isFavorite, toggleFavorite } = useWishlist();
 const { recentlyViewed } = useRecentlyViewed();
 
 const products = computed(() => {
@@ -53,7 +53,9 @@ function productLabel(product) {
 function onAddToCart(product, variant = null) {
   if (addToCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
+    return;
   }
+  toast.error(`Couldn't add ${productLabel(product)} to cart`);
 }
 
 function onGoToCart() {

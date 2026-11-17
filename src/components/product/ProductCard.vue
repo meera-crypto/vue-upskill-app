@@ -43,6 +43,9 @@ import {
   productHasVariants,
   productOptions,
 } from "@/utils/variants.js";
+import ProductPrice from "@/components/product/ProductPrice.vue";
+import ProductRating from "@/components/product/ProductRating.vue";
+import QuickViewModal from "@/components/product/QuickViewModal.vue";
 
 const props = defineProps({
   product: {
@@ -344,64 +347,14 @@ const detailsTo = computed(() =>
           Quick variant selection — over the image bottom on card hover.
           Pick options here, then use Add to cart (no details page needed).
         -->
-        <div
+        <QuickViewModal
           v-if="hasVariants"
-          class="product-card__quick-variants"
-          aria-label="Available options"
-        >
-          <div
-            v-for="group in optionGroups"
-            :key="group.name"
-            class="product-card__quick-group"
-          >
-            <p class="product-card__quick-label">
-              {{ group.name }}
-              <span
-                v-if="selectedOptions[group.name]"
-                class="product-card__quick-value"
-              >
-                {{ selectedOptions[group.name] }}
-              </span>
-            </p>
-            <div class="product-card__quick-values" role="list">
-              <button
-                v-for="value in group.values"
-                :key="`${group.name}-${value}`"
-                type="button"
-                class="product-card__quick-option"
-                :class="{
-                  'product-card__quick-option--swatch':
-                    !!optionSwatchHex(group.name, value),
-                  'product-card__quick-option--selected':
-                    selectedOptions[group.name] === value,
-                  'product-card__quick-option--unavailable':
-                    !optionValueAvailable(group.name, value),
-                }"
-                :style="
-                  optionSwatchHex(group.name, value)
-                    ? { '--swatch': optionSwatchHex(group.name, value) }
-                    : undefined
-                "
-                role="listitem"
-                :aria-pressed="selectedOptions[group.name] === value"
-                :aria-label="`${group.name} ${value}`"
-                :title="
-                  optionValueAvailable(group.name, value)
-                    ? value
-                    : `${value} unavailable`
-                "
-                @click.stop="selectOption(group.name, value)"
-              >
-                <span
-                  v-if="optionSwatchHex(group.name, value)"
-                  class="product-card__quick-swatch"
-                  aria-hidden="true"
-                />
-                <span v-else>{{ value }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+          :option-groups="optionGroups"
+          :selected-options="selectedOptions"
+          :swatch-hex-for="optionSwatchHex"
+          :is-available="optionValueAvailable"
+          @select="selectOption"
+        />
       </div>
 
       <div class="product-card__body">
@@ -444,45 +397,29 @@ const detailsTo = computed(() =>
           class="product-card__body-link product-card__body-link--details"
           :aria-label="`View ${displayName} pricing`"
         >
-          <p
+          <ProductRating
             v-if="hasRating"
-            class="product-card__rating"
-            :class="
-              ratingBadgeTone
-                ? `product-card__rating--${ratingBadgeTone}`
-                : undefined
-            "
-            :aria-label="ratingLabel"
+            :rating="product.rating"
+            :review-count="product.reviewCount"
+            :tone="ratingBadgeTone"
+            :label="ratingLabel"
           >
-            <Star
-              class="product-card__rating-icon"
-              :size="14"
-              fill="currentColor"
-              aria-hidden="true"
-            />
-            <span class="product-card__rating-score">
-              {{ product.rating.toFixed(1) }}
-            </span>
-            <span
-              v-if="product.reviewCount"
-              class="product-card__rating-count"
-            >
-              ({{ product.reviewCount }})
-            </span>
-          </p>
+            <template #icon>
+              <Star
+                class="rating-badge__icon"
+                :size="14"
+                fill="currentColor"
+                aria-hidden="true"
+              />
+            </template>
+          </ProductRating>
 
-          <div class="product-card__pricing">
-            <p class="product-card__price">${{ displayPrice.toFixed(2) }}</p>
-            <p
-              v-if="showDiscount"
-              class="product-card__price product-card__price--original"
-            >
-              ${{ product.originalPrice.toFixed(2) }}
-            </p>
-            <p v-if="discountPercentLabel" class="product-card__offer">
-              {{ discountPercentLabel }}
-            </p>
-          </div>
+          <ProductPrice
+            :price="displayPrice"
+            :original-price="product.originalPrice"
+            :show-discount="showDiscount"
+            :discount-percent-label="discountPercentLabel"
+          />
         </RouterLink>
 
         <!-- Outside the body link so cart clicks don’t navigate away -->

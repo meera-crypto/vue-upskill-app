@@ -3,14 +3,15 @@
  * Favorites page — products saved via the heart on product cards.
  *
  * Reuses ProductCard so Add to cart / unfavorite behave the same as on the
- * listing. State comes from shared useFavorites + useCart.
+ * listing. State comes from shared useWishlist + useCart.
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import ProductCard from "@/components/ProductCard.vue";
+import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
+import EmptyState from "@/components/listing/EmptyState.vue";
+import ProductCard from "@/components/product/ProductCard.vue";
 import { useCart } from "@/composables/useCart.js";
-import { useFavorites } from "@/composables/useFavorites.js";
+import { useWishlist } from "@/composables/useWishlist.js";
 import { useToast } from "@/composables/useToast.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
 
@@ -18,13 +19,10 @@ const router = useRouter();
 const toast = useToast();
 const { cartQuantities, addToCart } = useCart();
 const { favoriteProducts, favoriteIds, favoriteCount, toggleFavorite } =
-  useFavorites();
+  useWishlist();
 
-/** Products → Favorites (current page has no link). */
-const breadcrumbItems = computed(() => [
-  { label: "Products", to: { name: "products" } },
-  { label: "Favorites" },
-]);
+/** Single crumb for this top-level page (current page has no link). */
+const breadcrumbItems = computed(() => [{ label: "Favorites" }]);
 
 function productLabel(product) {
   return product?.title?.trim() || "Item";
@@ -33,7 +31,9 @@ function productLabel(product) {
 function onAddToCart(product, variant = null) {
   if (addToCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
+    return;
   }
+  toast.error(`Couldn't add ${productLabel(product)} to cart`);
 }
 
 function onGoToCart() {
@@ -60,8 +60,8 @@ function continueShopping() {
 </script>
 
 <template>
-  <!-- Header is in App.vue — shared across routes. -->
-  <main class="favorites-page">
+  <!-- Header / <main> are in App.vue — shared across routes. -->
+  <div class="favorites-page">
     <div class="container favorites-page__inner">
       <Breadcrumbs :items="breadcrumbItems" />
 
@@ -73,18 +73,20 @@ function continueShopping() {
         </p>
       </header>
 
-      <div v-if="favoriteProducts.length === 0" class="favorites-page__empty">
-        <p class="favorites-page__empty-text">
-          No favorites yet. Tap the heart on a product to save it here.
-        </p>
-        <button
-          type="button"
-          class="btn btn--primary"
-          @click="continueShopping"
-        >
-          Browse products
-        </button>
-      </div>
+      <EmptyState
+        v-if="favoriteProducts.length === 0"
+        message="No favorites yet. Tap the heart on a product to save it here."
+      >
+        <template #actions>
+          <button
+            type="button"
+            class="btn btn--primary"
+            @click="continueShopping"
+          >
+            Browse products
+          </button>
+        </template>
+      </EmptyState>
 
       <template v-else>
         <ul class="favorites-page__grid" aria-label="Favorite products">
@@ -116,5 +118,5 @@ function continueShopping() {
         </div>
       </template>
     </div>
-  </main>
+  </div>
 </template>

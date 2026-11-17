@@ -11,12 +11,17 @@
 @import "./components/breadcrumb.css";
 @import "./components/footer.css";
 @import "./components/product-list.css";
+@import "./components/product-skeleton.css";
+@import "./components/empty-state.css";
 @import "./components/sort-dropdown.css";
 @import "./components/filter-sidebar.css";
 @import "./components/pagination.css";
+@import "./components/rating-badge.css";
 @import "./components/product-card.css";
 @import "./components/toast.css";
 @import "./components/cart-page.css";
 @import "./components/favorites-page.css";
+@import "./components/404-page.css";
 @import "./components/product-details.css";
+@import "./components/product-compare.css";
 @import "./components/product-carousel.css";

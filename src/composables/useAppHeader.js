@@ -7,6 +7,8 @@
  * - On the listing route, category toggles update the URL; useListingQuerySync
  *   applies them to filters.
  * - On cart / favorites, search or category navigates home with ?q= / ?category=.
+ * - Search and category combine with AND (chip kept). No overlap → empty state
+ *   on the listing; the user clears search/category or picks another chip.
  */
 import { computed, watch, ref, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -75,26 +77,12 @@ export function useAppHeader() {
   }
 
   /**
-   * Header search is site-wide: as soon as the user types a query, drop the
-   * selected category so matches outside that category still appear.
-   * Other filters (brand, price, …) and sort stay. Clearing search does not
-   * restore the previous category.
+   * Pass typing through to the shared search box. Category stays selected;
+   * listing filters apply search AND category (empty state when no overlap).
    *
    * @param {string} next
    */
   function setQueryFromHeader(next) {
-    const trimmed = String(next ?? "").trim();
-    if (trimmed && isListing.value) {
-      const raw = route.query.category;
-      const hasCategory = raw != null && raw !== "";
-      if (hasCategory) {
-        /** @type {Record<string, string | string[]>} */
-        const nextQuery = { ...route.query };
-        delete nextQuery.category;
-        delete nextQuery.page;
-        router.replace({ query: nextQuery });
-      }
-    }
     setQuery(next);
   }
 

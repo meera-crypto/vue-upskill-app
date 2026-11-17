@@ -42,6 +42,39 @@ export const SORT_OPTIONS = [
 
 export const DEFAULT_SORT = "featured";
 
+/** sessionStorage key — last catalog price bounds (reduces slider jump on refresh). */
+const PRICE_BOUNDS_STORAGE_KEY = "vue-shop-price-bounds";
+
+/**
+ * @returns {{ min: number, max: number } | null}
+ */
+function readStoredPriceBounds() {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PRICE_BOUNDS_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const min = Number(parsed?.min);
+    const max = Number(parsed?.max);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= 0) return null;
+    return { min: Math.floor(min), max: Math.ceil(max) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * @param {{ min: number, max: number }} bounds
+ */
+function writeStoredPriceBounds(bounds) {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(PRICE_BOUNDS_STORAGE_KEY, JSON.stringify(bounds));
+  } catch {
+    /* Private mode / quota — ignore. */
+  }
+}
+
 /**
  * @param {unknown} a
  * @param {unknown} b
@@ -140,6 +173,9 @@ const priceFormatter = new Intl.NumberFormat("en-US", {
  *        Full catalog for stable option lists + price bounds.
  */
 export function useProductFilters(sourceProducts, catalogProducts) {
+  /** Last known bounds from a previous visit in this tab (before catalog fetch). */
+  const storedBounds = readStoredPriceBounds();
+
   const filters = reactive({
     /** @type {string[]} category slugs */
     categories: [],
@@ -153,9 +189,9 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     discounts: [],
     /** When true, only products with stock > 0 (Availability → In stock). */
     inStockOnly: false,
-    /** Current price range (synced to catalog bounds when catalog loads). */
-    priceMin: 0,
-    priceMax: 0,
+    /** Current price range (seeded from cache when available). */
+    priceMin: storedBounds?.min ?? 0,
+    priceMax: storedBounds?.max ?? 0,
     /**
      * Listing sort — toolbar dropdown (not a filter chip).
      * @type {'featured' | 'best-selling' | 'newest' | 'rating' | 'discount-desc' | 'price-asc' | 'price-desc'}
@@ -179,7 +215,8 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       .filter((n) => Number.isFinite(n) && n >= 0);
 
     if (prices.length === 0) {
-      return { min: 0, max: 0 };
+      /* Prefer cached bounds over 0–0 so the slider does not jump on refresh. */
+      return storedBounds ?? { min: 0, max: 0 };
     }
 
     return {
@@ -192,11 +229,15 @@ export function useProductFilters(sourceProducts, catalogProducts) {
    * Keep the slider range valid when the catalog first arrives.
    * Watch a primitive key so a new `{ min, max }` object each compute
    * does not re-run the callback and fight the user’s drag.
+   * Also persist bounds for the next refresh in this tab.
    */
   watch(
     () => `${priceBounds.value.min}:${priceBounds.value.max}`,
     () => {
       const { min, max } = priceBounds.value;
+      if (max > 0) {
+        writeStoredPriceBounds({ min, max });
+      }
       if (filters.priceMin === 0 && filters.priceMax === 0 && max > 0) {
         filters.priceMin = min;
         filters.priceMax = max;

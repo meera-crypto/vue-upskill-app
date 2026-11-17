@@ -34,6 +34,21 @@
   pointer-events: auto;
 }
 
+/* Failure feedback (cart add rejected, etc.) */
+.toast--error {
+  background-color: var(--color-danger);
+  color: var(--color-soft-white);
+}
+
+.toast--error .toast__dismiss {
+  color: color-mix(in srgb, var(--color-soft-white) 80%, transparent);
+}
+
+.toast--error .toast__dismiss:hover {
+  color: var(--color-danger);
+  background-color: var(--color-soft-white);
+}
+
 .toast__message {
   flex: 1 1 auto;
   margin: 0;

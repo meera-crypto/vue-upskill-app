@@ -11,7 +11,8 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { Minus, Plus, Trash2 } from "@lucide/vue";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
+import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
+import EmptyState from "@/components/listing/EmptyState.vue";
 import { useCart } from "@/composables/useCart.js";
 import { useToast } from "@/composables/useToast.js";
 import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
@@ -30,11 +31,8 @@ const {
   clearCart,
 } = useCart();
 
-/** Products → Cart (current page has no link). */
-const breadcrumbItems = computed(() => [
-  { label: "Products", to: { name: "products" } },
-  { label: "Cart" },
-]);
+/** Single crumb for this top-level page (current page has no link). */
+const breadcrumbItems = computed(() => [{ label: "Cart" }]);
 
 function productLabel(product) {
   return product?.title?.trim() || "Item";
@@ -71,8 +69,8 @@ function lineMax(product) {
 </script>
 
 <template>
-  <!-- Header is in App.vue — shared across routes. -->
-  <main class="cart-page">
+  <!-- Header / <main> are in App.vue — shared across routes. -->
+  <div class="cart-page">
     <div class="container cart-page__inner">
       <Breadcrumbs :items="breadcrumbItems" />
 
@@ -83,16 +81,21 @@ function lineMax(product) {
         </p>
       </header>
 
-      <div v-if="cartLines.length === 0" class="cart-page__empty">
-        <p class="cart-page__empty-text">Your cart is empty.</p>
-        <button
-          type="button"
-          class="btn btn--secondary"
-          @click="continueShopping"
-        >
-          Continue shopping
-        </button>
-      </div>
+      <EmptyState
+        v-if="cartLines.length === 0"
+        class="cart-page__empty"
+        message="Your cart is empty."
+      >
+        <template #actions>
+          <button
+            type="button"
+            class="btn btn--secondary"
+            @click="continueShopping"
+          >
+            Continue shopping
+          </button>
+        </template>
+      </EmptyState>
 
       <template v-else>
         <ul class="cart-page__list" aria-label="Cart items">
@@ -221,5 +224,5 @@ function lineMax(product) {
         </aside>
       </template>
     </div>
-  </main>
+  </div>
 </template>
