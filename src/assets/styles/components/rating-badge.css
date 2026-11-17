@@ -1,0 +1,59 @@
+/* Shared rating badge (card + details) — tones from getRatingBadgeTone */
+
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1;
+}
+
+.rating-badge--lg {
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.8125rem;
+}
+
+.rating-badge__icon {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.rating-badge__count {
+  font-weight: 500;
+  color: inherit;
+}
+
+/* Banded by score (see getRatingBadgeTone). */
+.rating-badge--below-1 {
+  background-color: #a92323;
+}
+
+.rating-badge--1-2 {
+  background-color: #b33e00;
+}
+
+.rating-badge--2-3 {
+  background-color: #a84100;
+}
+
+.rating-badge--3-4 {
+  background-color: #5d8132;
+}
+
+.rating-badge--4-5 {
+  background-color: #105b15;
+}
+
+@media (min-width: 768px) {
+  .rating-badge:not(.rating-badge--lg) {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+}

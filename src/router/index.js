@@ -5,12 +5,14 @@
  * (see useListingQuerySync). Path can be `/` or `/products`.
  * Product details uses `/product?id=…&slug=…` (id required; slug for readability).
  * `/favorites` and `/cart` are shopping pages fed by shared composables.
+ * Unknown paths hit the catch-all route and show 404Page.
  */
 import { createRouter, createWebHistory } from "vue-router";
 import ProductListingPage from "@/views/ProductListingPage.vue";
 import ProductDetailsPage from "@/views/ProductDetailsPage.vue";
 import FavoritesPage from "@/views/FavoritesPage.vue";
 import CartPage from "@/views/CartPage.vue";
+import Page404 from "@/views/404Page.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -47,6 +49,12 @@ const router = createRouter({
       path: "/cart",
       name: "cart",
       component: CartPage,
+    },
+    {
+      // Must stay last: matches any path that did not match a route above.
+      path: "/:pathMatch(.*)*",
+      name: "404-page",
+      component: Page404,
     },
   ],
   scrollBehavior(to, from, savedPosition) {

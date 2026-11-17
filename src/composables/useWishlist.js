@@ -1,9 +1,12 @@
 /**
- * useFavorites — shared wishlist state for the whole app.
+ * useWishlist — shared wishlist (favorites) state for the whole app.
  *
  * Same module-scope pattern as useCart / useToast: every component that
- * calls useFavorites() shares one reactive list. We store a product
+ * calls useWishlist() shares one reactive list. We store a product
  * snapshot so the Favorites page can render without re-fetching.
+ *
+ * Vue idea: a composable is a function that returns reactive state + methods.
+ * Module-level `ref`s mean one shared bag of favorites across routes.
  */
 import { ref, computed } from "vue";
 
@@ -104,7 +107,7 @@ function removeFavorite(productId) {
   persist();
 }
 
-export function useFavorites() {
+export function useWishlist() {
   return {
     items,
     favoriteIds,

@@ -6,8 +6,9 @@
  * component can call `toast.success('…')`, and ToastContainer reads
  * the same `toasts` list to render them.
  *
- * Accessibility: ToastContainer uses aria-live so screen readers announce
- * cart / favorites updates (see product-listing requirements §6).
+ * Types: success (added to cart), info (hints / removals), favorite
+ * (wishlist toggle), error (add-to-cart rejected). ToastContainer uses
+ * aria-live so screen readers announce updates (requirements §6).
  */
 import { ref } from "vue";
 

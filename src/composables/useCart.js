@@ -261,7 +261,7 @@ function clearCart() {
 }
 
 /**
- * Shape ProductList / ProductCard expect: `{ [productId]: quantity }`.
+ * Shape ProductGrid / ProductCard expect: `{ [productId]: quantity }`.
  * Sums quantities across every variant line of the same product so cards
  * still show “Go to cart” after any variant was added.
  */

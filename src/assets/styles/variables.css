@@ -15,16 +15,17 @@
   --color-primary-hover: #562c50;
   --color-secondary: #25232b;
   --color-soft-white: #f8f7f4;
-  --color-black: #7b7b7b;
+  --color-black: #000000;
   --color-tertiary: var(--color-soft-white);
   --color-neutral: #a89f9a;
+  --color-gray: #6f6d6d;
   --color-cool-blue: #f0f2f7;
   --color-pink: #c2185b;
-  --color-danger: #e53935;
+  --color-danger: #af1a18;
   --color-border: #ebe3df;
 
   --color-text: var(--color-primary);
-  --color-text-muted: var(--color-neutral);
+  --color-text-muted: var(--color-gray);
   --color-bg: var(--color-tertiary);
   --color-accent: var(--color-secondary);
   --color-favorite: var(--color-pink);

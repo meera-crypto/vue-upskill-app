@@ -1,0 +1,48 @@
+/* 404 page */
+
+.page-404 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 1.5rem 3rem;
+  min-height: 50vh;
+}
+
+.page-404__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+}
+
+.page-404__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-404__code {
+  margin: 0;
+  font-size: clamp(2.5rem, 6vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+  color: var(--color-primary);
+}
+
+.page-404__title {
+  margin: 0;
+  font-size: var(--font-size-h3);
+  line-height: var(--line-height-h3);
+  color: var(--color-primary);
+}
+
+.page-404 .empty-state {
+  align-items: center;
+}
+
+.page-404 .empty-state__actions {
+  justify-content: center;
+}

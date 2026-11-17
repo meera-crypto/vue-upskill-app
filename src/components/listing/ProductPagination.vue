@@ -2,7 +2,7 @@
 /**
  * ProductPagination — page controls under the product grid.
  *
- * Result count (“Showing X–Y of Z”) lives in ProductList’s toolbar next to
+ * Result count (“Showing X–Y of Z”) lives in ProductGrid’s toolbar next to
  * the sort dropdown. This component only renders Prev / page numbers / Next.
  */
 import { ChevronLeft, ChevronRight } from "@lucide/vue";

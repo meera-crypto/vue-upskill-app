@@ -1,6 +1,6 @@
 <script setup>
 /**
- * ProductList — toolbar, filters, and product grid.
+ * ProductGrid — toolbar, filters, and product grid.
  *
  * Layout:
  * - Desktop: sticky FilterSidebar on the left + chips + grid on the right
@@ -12,11 +12,13 @@
  */
 import { ref, computed, onUnmounted, watch } from "vue";
 import { SlidersHorizontal } from "@lucide/vue";
-import ProductCard from "@/components/ProductCard.vue";
-import FilterSidebar from "@/components/FilterSidebar.vue";
-import ActiveFilterChips from "@/components/ActiveFilterChips.vue";
-import ProductPagination from "@/components/ProductPagination.vue";
-import SortDropdown from "@/components/SortDropdown.vue";
+import ProductCard from "@/components/product/ProductCard.vue";
+import ProductSkeleton from "@/components/listing/ProductSkeleton.vue";
+import EmptyState from "@/components/listing/EmptyState.vue";
+import FilterSidebar from "@/components/listing/FilterSidebar.vue";
+import ActiveFilterChips from "@/components/listing/ActiveFilterChips.vue";
+import ProductPagination from "@/components/listing/ProductPagination.vue";
+import SortDropdown from "@/components/listing/SortDropdown.vue";
 import { SORT_OPTIONS } from "@/composables/useProductFilters.js";
 
 const props = defineProps({
@@ -168,6 +170,21 @@ const summaryRange = computed(() => ({
 const showResultSummary = computed(
   () => !props.loading && !props.error && props.total > 0,
 );
+
+/** Empty-state copy depends on whether search and/or filters are active. */
+const emptyMessage = computed(() => {
+  const query = props.searchQuery.trim();
+  if (query && props.hasActiveFilters) {
+    return `No products match “${query}” with these filters.`;
+  }
+  if (query) return `No products match “${query}”.`;
+  if (props.hasActiveFilters) return "No products match these filters.";
+  return "No products found.";
+});
+
+const showEmptyFilterActions = computed(
+  () => Boolean(props.searchQuery.trim()) || props.hasActiveFilters,
+);
 </script>
 
 <template>
@@ -177,26 +194,28 @@ const showResultSummary = computed(
     aria-labelledby="product-list-heading"
   >
     <div class="container">
+      <!--
+        Mobile: heading + sort share one row; result count wraps below.
+        Desktop (md+): count + Featured sort grouped top-right.
+      -->
       <div class="product-list__toolbar">
-        <div class="product-list__toolbar-start">
-          <div class="product-list__heading-row">
-            <button
-              type="button"
-              class="product-list__filters-toggle"
-              :aria-expanded="filtersOpen"
-              aria-controls="product-filters"
-              aria-label="Open filters"
-              @click="openFilters"
-            >
-              <SlidersHorizontal :size="20" aria-hidden="true" />
-              <span v-if="hasActiveFilters" class="product-list__filters-badge">
-                {{ activeChips.length }}
-              </span>
-            </button>
-            <h2 id="product-list-heading" class="product-list__heading">
-              Products
-            </h2>
-          </div>
+        <div class="product-list__heading-row">
+          <button
+            type="button"
+            class="product-list__filters-toggle"
+            :aria-expanded="filtersOpen"
+            aria-controls="product-filters"
+            aria-label="Open filters"
+            @click="openFilters"
+          >
+            <SlidersHorizontal :size="20" aria-hidden="true" />
+            <span v-if="hasActiveFilters" class="product-list__filters-badge">
+              {{ activeChips.length }}
+            </span>
+          </button>
+          <h2 id="product-list-heading" class="product-list__heading">
+            Products
+          </h2>
         </div>
 
         <div class="product-list__toolbar-end">
@@ -231,6 +250,10 @@ const showResultSummary = computed(
           @click="closeFilters"
         />
 
+        <!--
+          Always mount FilterSidebar. Layout shift while the catalog loads is
+          limited with CSS min-heights (see filter-sidebar.css), not a skeleton.
+        -->
         <FilterSidebar
           id="product-filters"
           :filters="filters"
@@ -255,46 +278,23 @@ const showResultSummary = computed(
             @clear="emit('clear-filters')"
           />
 
-          <div
-            v-if="loading"
-            class="product-list__status"
-            role="status"
-            aria-live="polite"
-          >
-            Loading products…
-          </div>
+          <ProductSkeleton v-if="loading" :count="12" />
 
-          <div
-            v-else-if="error"
-            class="product-list__status product-list__status--error"
-            role="alert"
-          >
-            <p>{{ error }}</p>
-            <button
-              type="button"
-              class="btn btn--secondary"
-              @click="emit('retry')"
-            >
-              Retry
-            </button>
-          </div>
+          <EmptyState v-else-if="error" variant="error" :message="error">
+            <template #actions>
+              <button
+                type="button"
+                class="btn btn--secondary"
+                @click="emit('retry')"
+              >
+                Retry
+              </button>
+            </template>
+          </EmptyState>
 
-          <div
-            v-else-if="total === 0"
-            class="product-list__status"
-            role="status"
-          >
-            <template v-if="searchQuery.trim() || hasActiveFilters">
-              <p>
-                <template v-if="searchQuery.trim()">
-                  No products match “{{ searchQuery.trim() }}”
-                  <template v-if="hasActiveFilters">
-                    with these filters</template
-                  >.
-                </template>
-                <template v-else> No products match these filters. </template>
-              </p>
-              <div class="product-list__empty-actions">
+          <EmptyState v-else-if="total === 0" :message="emptyMessage">
+            <template #actions>
+              <template v-if="showEmptyFilterActions">
                 <button
                   v-if="hasActiveFilters"
                   type="button"
@@ -311,11 +311,9 @@ const showResultSummary = computed(
                 >
                   Clear search
                 </button>
-              </div>
-            </template>
-            <template v-else>
-              <p>No products found.</p>
+              </template>
               <button
+                v-else
                 type="button"
                 class="btn btn--secondary"
                 @click="emit('retry')"
@@ -323,7 +321,7 @@ const showResultSummary = computed(
                 Try again
               </button>
             </template>
-          </div>
+          </EmptyState>
 
           <template v-else>
             <ul class="product-list__grid">
@@ -337,8 +335,7 @@ const showResultSummary = computed(
                   :favorited="isFavorite(product.id)"
                   :quantity="quantityFor(product.id)"
                   @add-to-cart="
-                    (product, variant) =>
-                      emit('add-to-cart', product, variant)
+                    (product, variant) => emit('add-to-cart', product, variant)
                   "
                   @go-to-cart="emit('go-to-cart', $event)"
                   @toggle-favorite="emit('toggle-favorite', $event)"

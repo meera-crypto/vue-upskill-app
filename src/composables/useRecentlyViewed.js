@@ -1,7 +1,7 @@
 /**
  * useRecentlyViewed — products the shopper opened on the details page.
  *
- * Same module-scope pattern as useCart / useFavorites: every caller shares
+ * Same module-scope pattern as useCart / useWishlist: every caller shares
  * one reactive list. We store product snapshots (newest first) in
  * localStorage so the row survives refresh without re-fetching.
  *

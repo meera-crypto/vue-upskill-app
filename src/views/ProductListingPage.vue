@@ -3,7 +3,7 @@
  * Product listing page — wires search → filters → pagination and syncs them to the URL.
  *
  * Discovery pipeline (requirements):
- *   useProducts (search) → useProductFilters → usePagination → ProductList
+ *   useProducts (search) → useProductFilters → usePagination → ProductGrid
  *   useListingQuerySync keeps that state shareable via ?q=&brand=&page=…
  *
  * Vue concepts: composables return reactive state; this view wires them together
@@ -11,16 +11,16 @@
  */
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import Hero from "@/components/Hero.vue";
-import ProductList from "@/components/ProductList.vue";
-import RecentlyViewedProducts from "@/components/RecentlyViewedProducts.vue";
+import Hero from "@/components/layout/Hero.vue";
+import ProductGrid from "@/components/product/ProductGrid.vue";
+import RecentlyViewedProducts from "@/components/product/RecentlyViewedProducts.vue";
 import { useProducts } from "@/composables/useProducts.js";
 import { useProductFilters } from "@/composables/useProductFilters.js";
 import { usePagination } from "@/composables/usePagination.js";
 import { useListingQuerySync } from "@/composables/useListingQuerySync.js";
 import { useToast } from "@/composables/useToast.js";
 import { useCart } from "@/composables/useCart.js";
-import { useFavorites } from "@/composables/useFavorites.js";
+import { useWishlist } from "@/composables/useWishlist.js";
 import { mediaQueries } from "@/constants/breakpoints.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
 
@@ -172,7 +172,7 @@ watch(page, async (nextPage, prevPage) => {
 const router = useRouter();
 const toast = useToast();
 const { cartQuantities, addToCart: putInCart } = useCart();
-const { favoriteIds, toggleFavorite: toggleFavoriteId } = useFavorites();
+const { favoriteIds, toggleFavorite: toggleFavoriteId } = useWishlist();
 
 /** Friendly label for toast copy (title with a safe fallback). */
 function productLabel(product) {
@@ -186,7 +186,9 @@ function productLabel(product) {
 function addToCart(product, variant = null) {
   if (putInCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
+    return;
   }
+  toast.error(`Couldn't add ${productLabel(product)} to cart`);
 }
 
 function goToCart() {
@@ -218,56 +220,54 @@ function onPriceMax(value) {
 </script>
 
 <template>
-  <!-- Header is in App.vue — shared across listing, cart, and favorites. -->
+  <!-- Header / <main> are in App.vue — shared across routes. -->
   <Hero />
 
-  <main>
-    <ProductList
-      :products="displayedProducts"
-      :total="total"
-      :range="displayRange"
-      :search-query="query"
-      :loading="loading"
-      :error="error"
-      :cart="cartQuantities"
-      :favorites="favoriteIds"
-      :filters="filters"
-      :filter-options="filterOptions"
-      :price-bounds="priceBounds"
-      :active-chips="activeChips"
-      :has-active-filters="hasActiveFilters"
-      :show-pagination="showPagination"
-      :show-load-more="showLoadMore"
-      :page="page"
-      :total-pages="totalPages"
-      :page-items="pageItems"
-      :can-prev="canPrev"
-      :can-next="canNext"
-      @retry="retry"
-      @clear-search="clearSearch"
-      @add-to-cart="addToCart"
-      @go-to-cart="goToCart"
-      @toggle-favorite="toggleFavorite"
-      @see-all-options="seeAllOptions"
-      @toggle-brand="toggleBrand"
-      @toggle-color="toggleColor"
-      @toggle-rating="toggleRating"
-      @toggle-discount="toggleDiscount"
-      @toggle-in-stock="toggleInStock"
-      @update:sort="setSort"
-      @update:price-min="onPriceMin"
-      @update:price-max="onPriceMax"
-      @remove-chip="removeChip"
-      @clear-filters="clearFilters"
-      @page-prev="prev"
-      @page-next="next"
-      @go-to-page="goToPage"
-      @load-more="loadMore"
-    />
+  <ProductGrid
+    :products="displayedProducts"
+    :total="total"
+    :range="displayRange"
+    :search-query="query"
+    :loading="loading"
+    :error="error"
+    :cart="cartQuantities"
+    :favorites="favoriteIds"
+    :filters="filters"
+    :filter-options="filterOptions"
+    :price-bounds="priceBounds"
+    :active-chips="activeChips"
+    :has-active-filters="hasActiveFilters"
+    :show-pagination="showPagination"
+    :show-load-more="showLoadMore"
+    :page="page"
+    :total-pages="totalPages"
+    :page-items="pageItems"
+    :can-prev="canPrev"
+    :can-next="canNext"
+    @retry="retry"
+    @clear-search="clearSearch"
+    @add-to-cart="addToCart"
+    @go-to-cart="goToCart"
+    @toggle-favorite="toggleFavorite"
+    @see-all-options="seeAllOptions"
+    @toggle-brand="toggleBrand"
+    @toggle-color="toggleColor"
+    @toggle-rating="toggleRating"
+    @toggle-discount="toggleDiscount"
+    @toggle-in-stock="toggleInStock"
+    @update:sort="setSort"
+    @update:price-min="onPriceMin"
+    @update:price-max="onPriceMax"
+    @remove-chip="removeChip"
+    @clear-filters="clearFilters"
+    @page-prev="prev"
+    @page-next="next"
+    @go-to-page="goToPage"
+    @load-more="loadMore"
+  />
 
-    <!-- Optional: products opened on the details page (localStorage). -->
-    <div class="container">
-      <RecentlyViewedProducts />
-    </div>
-  </main>
+  <!-- Optional: products opened on the details page (localStorage). -->
+  <div class="container">
+    <RecentlyViewedProducts />
+  </div>
 </template>

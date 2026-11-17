@@ -6,20 +6,24 @@
  * - `route.query.id` drives the fetch (required, shareable like listing `?q=`)
  * - `route.query.slug` is readable URL text; synced once the product loads
  * - `useProductDetail` watches that id, fetches, and cancels stale requests
- * - Shared `useCart` / `useFavorites` keep header badges in sync
+ * - Shared `useCart` / `useWishlist` keep header badges in sync
  * - Qty uses a − / typed input / + stepper (clamped to stock)
  * - Variant options: `selectedOptions` ref + `computed` activeVariant
  * - Quick-view picks arrive via `?opts=` / `?variant=` and hydrate selection
  * - Similar products: `computed` from the shared catalog + current product
+ * - Compare: same category + all tags matched (any brand); table below reviews
  * - Similar + Recently viewed rows share ProductCarousel (one scroll UI)
  */
-import { computed, ref, watch } from "vue";
+import { computed, ref, useTemplateRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Heart, Minus, Plus, Star } from "@lucide/vue";
-import Breadcrumbs from "@/components/Breadcrumbs.vue";
-import ProductCard from "@/components/ProductCard.vue";
-import ProductCarousel from "@/components/ProductCarousel.vue";
-import RecentlyViewedProducts from "@/components/RecentlyViewedProducts.vue";
+import { Columns2, Heart, Minus, Plus, Star } from "@lucide/vue";
+import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
+import EmptyState from "@/components/listing/EmptyState.vue";
+import ProductCard from "@/components/product/ProductCard.vue";
+import ProductCarousel from "@/components/product/ProductCarousel.vue";
+import ProductCompare from "@/components/product/ProductCompare.vue";
+import ProductRating from "@/components/product/ProductRating.vue";
+import RecentlyViewedProducts from "@/components/product/RecentlyViewedProducts.vue";
 import {
   COLOR_SWATCH_HEX,
   PRODUCT_IMAGE_FALLBACK,
@@ -28,7 +32,7 @@ import {
 import { useProductDetail } from "@/composables/useProductDetail.js";
 import { useProducts } from "@/composables/useProducts.js";
 import { useCart } from "@/composables/useCart.js";
-import { useFavorites } from "@/composables/useFavorites.js";
+import { useWishlist } from "@/composables/useWishlist.js";
 import { useRecentlyViewed } from "@/composables/useRecentlyViewed.js";
 import { useToast } from "@/composables/useToast.js";
 import {
@@ -36,6 +40,7 @@ import {
   selectedOptionsFromQuery,
 } from "@/utils/productRoutes.js";
 import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
+import { getComparableProducts } from "@/utils/compareProducts.js";
 import {
   getSimilarProducts,
   similarProductsListingTo,
@@ -72,7 +77,7 @@ const {
   getQuantity,
   setQuantity,
 } = useCart();
-const { isFavorite, toggleFavorite } = useFavorites();
+const { isFavorite, toggleFavorite } = useWishlist();
 /** Shared catalog — same fetch the listing uses (loads on mount if needed). */
 const { catalog } = useProducts();
 
@@ -130,7 +135,7 @@ const lineKey = computed(() =>
   product.value ? cartLineKey(product.value, activeVariant.value) : "",
 );
 
-/** Parent catalog stock (any variant left) — controls whether the buy box shows. */
+/** Parent catalog stock (any variant left). */
 const productHasStock = computed(() => (product.value?.stock ?? 0) > 0);
 
 /**
@@ -142,6 +147,18 @@ const canPurchase = computed(() => {
   if (!hasVariants.value) return true;
   if (!selectionComplete.value) return false;
   return (activeVariant.value?.stock ?? 0) > 0;
+});
+
+/**
+ * Show “Notify me” instead of “Buy now” when the product (or selected
+ * combination) is out of stock. Incomplete variant picks still show Buy now
+ * (disabled) so shoppers finish selecting options first.
+ */
+const showNotifyMe = computed(() => {
+  if (!product.value) return false;
+  if (!productHasStock.value) return true;
+  if (!hasVariants.value || !selectionComplete.value) return false;
+  return (activeVariant.value?.stock ?? 0) <= 0;
 });
 
 const inStock = computed(() => {
@@ -292,6 +309,23 @@ const similarWatchKey = computed(
   () =>
     `${product.value?.id ?? ""}:${similarPreview.value.length}:${showSimilarViewAll.value}`,
 );
+
+/**
+ * Compare peers: same category + identical tags, any brand.
+ * Button + section only render when at least one peer exists.
+ */
+const comparableProducts = computed(() =>
+  getComparableProducts(product.value, catalog.value),
+);
+
+const canCompare = computed(() => comparableProducts.value.length > 0);
+
+/** Child expose: openPanel() scrolls the compare section into view. */
+const productCompareRef = useTemplateRef("productCompareRef");
+
+function onOpenCompare() {
+  productCompareRef.value?.openPanel?.();
+}
 
 const infoRows = computed(() => {
   if (!product.value) return [];
@@ -496,7 +530,7 @@ function onZoomMove(event) {
   zoomResultStyle.value = {
     width: `${rect.width}px`,
     height: `${rect.height}px`,
-    backgroundImage: `url(${activeImage.value})`,
+    backgroundImage: `url(${JSON.stringify(activeImage.value)})`,
     backgroundRepeat: "no-repeat",
     backgroundSize: `${rect.width * ZOOM_LEVEL}px ${rect.height * ZOOM_LEVEL}px`,
     backgroundPosition: `-${lensX * ZOOM_LEVEL}px -${lensY * ZOOM_LEVEL}px`,
@@ -588,7 +622,9 @@ function onAddToCart() {
 
   if (addToCart(product.value, qty, variant)) {
     toast.success(`${displayName.value} added to cart`);
+    return;
   }
+  toast.error(`Couldn't add ${displayName.value} to cart`);
 }
 
 function onBuyNow() {
@@ -601,12 +637,22 @@ function onBuyNow() {
   if (wasNew) {
     const qty = quantityForCart();
     if (qty == null) return;
-    if (!addToCart(product.value, qty, variant)) return;
+    if (!addToCart(product.value, qty, variant)) {
+      toast.error(`Couldn't add ${displayName.value} to cart`);
+      return;
+    }
     toast.success(`${displayName.value} added to cart`);
   } else if (!buyNow(product.value, variant)) {
+    toast.error(`Couldn't add ${displayName.value} to cart`);
     return;
   }
   router.push({ name: "cart" });
+}
+
+/** Simulated back-in-stock alert (no real email signup yet). */
+function onNotifyMe() {
+  if (!product.value) return;
+  toast.info(`We'll notify you when ${displayName.value} is back in stock`);
 }
 
 function onToggleFavorite() {
@@ -630,7 +676,9 @@ function productLabel(item) {
 function onSimilarAddToCart(item, variant = null) {
   if (addToCart(item, 1, variant)) {
     toast.success(`${productLabel(item)} added to cart`);
+    return;
   }
+  toast.error(`Couldn't add ${productLabel(item)} to cart`);
 }
 
 function onSimilarGoToCart() {
@@ -692,7 +740,8 @@ const breadcrumbItems = computed(() => {
 </script>
 
 <template>
-  <main class="product-details">
+  <!-- Header / <main> are in App.vue — shared across routes. -->
+  <div class="product-details">
     <div class="container product-details__inner">
       <Breadcrumbs :items="breadcrumbItems" />
 
@@ -719,15 +768,12 @@ const breadcrumbItems = computed(() => {
       </div>
 
       <!-- Error / not found -->
-      <div
+      <EmptyState
         v-else-if="(error || notFound) && !product"
-        class="product-details__state"
-        role="alert"
+        variant="error"
+        :message="error || 'This product could not be found.'"
       >
-        <p class="product-details__state-text">
-          {{ error || "This product could not be found." }}
-        </p>
-        <div class="product-details__state-actions">
+        <template #actions>
           <button
             v-if="!notFound"
             type="button"
@@ -743,8 +789,8 @@ const breadcrumbItems = computed(() => {
           >
             Browse products
           </button>
-        </div>
-      </div>
+        </template>
+      </EmptyState>
 
       <!-- Product -->
       <template v-else-if="product">
@@ -843,31 +889,23 @@ const breadcrumbItems = computed(() => {
               {{ displayName }}
             </h1>
 
-            <p
+            <ProductRating
               v-if="hasRating"
-              class="product-details__rating"
-              :class="
-                ratingBadgeTone
-                  ? `product-details__rating--${ratingBadgeTone}`
-                  : undefined
-              "
-              :aria-label="ratingLabel"
+              size="lg"
+              :rating="product.rating"
+              :review-count="product.reviewCount"
+              :tone="ratingBadgeTone"
+              :label="ratingLabel"
             >
-              <Star
-                class="product-details__rating-icon"
-                :size="16"
-                fill="currentColor"
-                aria-hidden="true"
-              />
-              <span>{{ product.rating.toFixed(1) }}</span>
-              <span
-                v-if="product.reviewCount"
-                class="product-details__rating-count"
-              >
-                ({{ product.reviewCount }}
-                {{ product.reviewCount === 1 ? "review" : "reviews" }})
-              </span>
-            </p>
+              <template #icon>
+                <Star
+                  class="rating-badge__icon"
+                  :size="16"
+                  fill="currentColor"
+                  aria-hidden="true"
+                />
+              </template>
+            </ProductRating>
 
             <div class="product-details__pricing">
               <p class="product-details__price">
@@ -995,7 +1033,7 @@ const breadcrumbItems = computed(() => {
               </li>
             </ul>
 
-            <div v-if="productHasStock" class="product-details__buy-box">
+            <div class="product-details__buy-box">
               <div class="product-details__purchase-row">
                 <div class="product-details__qty">
                   <span
@@ -1056,17 +1094,22 @@ const breadcrumbItems = computed(() => {
               <button
                 type="button"
                 class="btn btn--tertiary product-details__buy"
-                :disabled="!canPurchase"
-                @click="onBuyNow"
+                :disabled="showNotifyMe ? false : !canPurchase"
+                @click="showNotifyMe ? onNotifyMe() : onBuyNow()"
               >
-                Buy now
+                {{ showNotifyMe ? "Notify me" : "Buy now" }}
               </button>
             </div>
 
-            <p v-else class="product-details__oos-note">
-              This item is currently unavailable. Browse similar products from
-              the listing.
-            </p>
+            <button
+              v-if="canCompare"
+              type="button"
+              class="btn btn--secondary product-details__compare-btn"
+              @click="onOpenCompare"
+            >
+              <Columns2 :size="18" aria-hidden="true" />
+              Compare with similar
+            </button>
 
             <dl v-if="infoRows.length" class="product-details__meta-list">
               <div
@@ -1110,6 +1153,17 @@ const breadcrumbItems = computed(() => {
             </li>
           </ul>
         </section>
+
+        <!--
+          Compare — same category + all tags matched (any brand).
+          Only mounts when peers exist; current product stays highlighted in the table.
+        -->
+        <ProductCompare
+          v-if="canCompare && product"
+          ref="productCompareRef"
+          :product="product"
+          :candidates="comparableProducts"
+        />
 
         <!--
           Similar products — same category (ranked by brand + tags).
@@ -1177,5 +1231,5 @@ const breadcrumbItems = computed(() => {
         </p>
       </template>
     </div>
-  </main>
+  </div>
 </template>

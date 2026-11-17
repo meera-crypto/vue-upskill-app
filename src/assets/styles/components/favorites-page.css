@@ -31,21 +31,6 @@
   font-size: 0.9375rem;
 }
 
-.favorites-page__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 2rem 0;
-}
-
-.favorites-page__empty-text {
-  margin: 0;
-  max-width: 28rem;
-  color: var(--color-text-muted);
-  font-size: 1.0625rem;
-}
-
 .favorites-page__grid {
   list-style: none;
   margin: 0;
