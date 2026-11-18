@@ -14,8 +14,22 @@
  */
 
 import { PRODUCT_VARIANT_OVERLAYS } from "@/data/productVariants.js";
+import { PRODUCT_SORT_META } from "@/data/productSortMeta.js";
 
-const API_BASE = "https://dummyjson.com";
+/**
+ * API origin from `.env` (`VITE_BASE_URL`). Vite only exposes vars prefixed
+ * with `VITE_` to client code via `import.meta.env`.
+ * Trailing slashes are stripped so paths like `/products` stay valid.
+ */
+const API_BASE = String(import.meta.env.VITE_BASE_URL ?? "")
+  .trim()
+  .replace(/\/+$/, "");
+
+if (!API_BASE) {
+  console.warn(
+    "[productService] VITE_BASE_URL is missing. Set it in `.env` (see `.env.example`).",
+  );
+}
 
 /** Shown when a product has no usable image URL (neutral SVG placeholder). */
 export const PRODUCT_IMAGE_FALLBACK =
@@ -236,17 +250,9 @@ function mapDummyProduct(raw) {
   const createdAt =
     typeof meta.createdAt === "string" && meta.createdAt
       ? meta.createdAt
-      : null;
-
-  /**
-   * DummyJSON has no dedicated sales field. Map review volume onto
-   * `salesCount` so Best Seller can sort by that field (requirements §3.4).
-   */
-  const salesCount = reviews.length;
-
-  /** Featured: strong rating and/or meaningful discount. */
-  const isFeatured =
-    (rating != null && rating >= 4) || displayDiscount >= 15;
+      : typeof raw.createdAt === "string" && raw.createdAt
+        ? raw.createdAt
+        : null;
 
   const tags = Array.isArray(raw.tags)
     ? raw.tags.filter((tag) => typeof tag === "string" && tag.trim())
@@ -256,8 +262,15 @@ function mapDummyProduct(raw) {
    * Variants: prefer API payload when present; else local overlay by id.
    * PDP / cart only care about the normalized `options` + `variants` shape.
    */
-  const { options, variants, stock: variantStock, colors: variantColors } =
-    resolveProductVariants(raw, images);
+  const {
+    options,
+    variants,
+    stock: variantStock,
+    colors: variantColors,
+  } = resolveProductVariants(raw, images);
+
+  const salesCount = resolveSalesCount(raw, raw.id, reviews.length);
+  const isFeatured = resolveIsFeatured(raw, raw.id, rating, displayDiscount);
 
   const apiColors = normalizeColorList(raw.colors);
   const mappedColors =
@@ -266,6 +279,8 @@ function mapDummyProduct(raw) {
       : variantColors.length > 0
         ? variantColors
         : extractColors(title, description);
+  /** Size values from the Size option (listing filter); empty when N/A. */
+  const mappedSizes = sizesFromOptions(options);
 
   const mappedStock =
     variants.length > 0
@@ -289,7 +304,7 @@ function mapDummyProduct(raw) {
     discountPercentage: displayDiscount,
     rating,
     reviewCount: reviews.length > 0 ? reviews.length : null,
-    /** Used by Best Seller sort (DummyJSON proxy — see comment above). */
+    /** Used by Best Seller sort (API / local overlay / stable fallback). */
     salesCount,
     createdAt,
     stock: mappedStock,
@@ -299,6 +314,8 @@ function mapDummyProduct(raw) {
     /** Prefer for narrow viewports via <picture> <source>. */
     thumbnail,
     colors: mappedColors,
+    /** Size option values for the listing Size filter (empty when none). */
+    sizes: mappedSizes,
     /** From API variants when present; otherwise local overlay (or empty). */
     options,
     variants,
@@ -315,12 +332,9 @@ function mapDummyProduct(raw) {
       typeof raw.shippingInformation === "string"
         ? raw.shippingInformation
         : "",
-    returnPolicy:
-      typeof raw.returnPolicy === "string" ? raw.returnPolicy : "",
+    returnPolicy: typeof raw.returnPolicy === "string" ? raw.returnPolicy : "",
     availabilityStatus:
-      typeof raw.availabilityStatus === "string"
-        ? raw.availabilityStatus
-        : "",
+      typeof raw.availabilityStatus === "string" ? raw.availabilityStatus : "",
   };
 }
 
@@ -575,6 +589,68 @@ function colorsFromOptions(options) {
 }
 
 /**
+ * Size option values for the listing Size filter (preserve display casing).
+ * @param {{ name: string, values: string[] }[]} options
+ * @returns {string[]}
+ */
+function sizesFromOptions(options) {
+  const sizeOption = options.find(
+    (option) => option.name.toLowerCase() === "size",
+  );
+  if (!sizeOption) return [];
+  return [
+    ...new Set(
+      sizeOption.values.map((value) => String(value).trim()).filter(Boolean),
+    ),
+  ];
+}
+
+/**
+ * Prefer API sales fields, then local overlay, then a stable id-based fallback
+ * (not plain review count — Best Selling should vary across the catalog).
+ * @param {Record<string, unknown>} raw
+ * @param {unknown} id
+ * @param {number} reviewCount
+ * @returns {number}
+ */
+function resolveSalesCount(raw, id, reviewCount) {
+  const fromApi = Number(raw.salesCount ?? raw.unitsSold ?? raw.sold);
+  if (Number.isFinite(fromApi) && fromApi >= 0) return Math.floor(fromApi);
+
+  const overlay = PRODUCT_SORT_META[Number(id)];
+  if (
+    overlay &&
+    Number.isFinite(overlay.salesCount) &&
+    overlay.salesCount >= 0
+  ) {
+    return Math.floor(overlay.salesCount);
+  }
+
+  const n = Number(id) || 0;
+  const reviews = Number.isFinite(reviewCount) ? reviewCount : 0;
+  return ((n * 37) % 900) + reviews * 12 + 15;
+}
+
+/**
+ * Prefer API / local `isFeatured`, else a tighter rating/discount heuristic.
+ * @param {Record<string, unknown>} raw
+ * @param {unknown} id
+ * @param {number | null} rating
+ * @param {number} displayDiscount
+ * @returns {boolean}
+ */
+function resolveIsFeatured(raw, id, rating, displayDiscount) {
+  if (typeof raw.isFeatured === "boolean") return raw.isFeatured;
+
+  const overlay = PRODUCT_SORT_META[Number(id)];
+  if (overlay && typeof overlay.isFeatured === "boolean") {
+    return overlay.isFeatured;
+  }
+
+  return (rating != null && rating >= 4.5) || displayDiscount >= 20;
+}
+
+/**
  * Normalize an API `colors` array into lowercase filter tokens.
  * @param {unknown} rawColors
  * @returns {string[]}
@@ -584,7 +660,11 @@ function normalizeColorList(rawColors) {
   return [
     ...new Set(
       rawColors
-        .map((value) => String(value ?? "").trim().toLowerCase())
+        .map((value) =>
+          String(value ?? "")
+            .trim()
+            .toLowerCase(),
+        )
         .filter((value) => value && KNOWN_COLORS.includes(value)),
     ),
   ];
@@ -651,7 +731,7 @@ export async function fetchCatalog({ signal } = {}) {
 }
 
 /**
- * Case-insensitive partial match on title, brand, or tags.
+ * Case-insensitive partial match on title, brand, tags, or category.
  * Shared by listing search, suggestions, and searchProducts().
  *
  * @param {Record<string, unknown>} product
@@ -669,6 +749,12 @@ export function productMatchesSearch(product, query) {
 
   const brand = String(product?.brand ?? "").toLowerCase();
   if (brand.includes(q)) return true;
+
+  const category = String(product?.category ?? "").toLowerCase();
+  if (category.includes(q)) return true;
+
+  const categoryLabel = String(product?.categoryLabel ?? "").toLowerCase();
+  if (categoryLabel.includes(q)) return true;
 
   const tags = Array.isArray(product?.tags) ? product.tags : [];
   return tags.some((tag) => String(tag).toLowerCase().includes(q));
@@ -695,13 +781,49 @@ export function matchingProductTag(product, query) {
 }
 
 /**
+ * Secondary suggestion line: brand, matching tag, or category — so tag-only
+ * / brand-only / category-only hits still show why they matched.
+ * @param {Record<string, unknown>} product
+ * @param {string} query
+ * @returns {string}
+ */
+export function matchingSearchMeta(product, query) {
+  const q = String(query ?? "")
+    .trim()
+    .toLowerCase();
+  if (!q) return String(product?.brand ?? "").trim();
+
+  const title = String(product?.title ?? "").toLowerCase();
+  if (title.includes(q)) {
+    return String(product?.brand ?? "").trim();
+  }
+
+  const brand = String(product?.brand ?? "").trim();
+  if (brand && brand.toLowerCase().includes(q)) return brand;
+
+  const tag = matchingProductTag(product, q);
+  if (tag) return tag;
+
+  const categoryLabel = String(
+    product?.categoryLabel || product?.category || "",
+  ).trim();
+  if (categoryLabel && categoryLabel.toLowerCase().includes(q)) {
+    return categoryLabel;
+  }
+
+  return brand;
+}
+
+/**
  * Case-insensitive partial match on product title, brand, or tags.
  * Prefer filtering an already-loaded catalog in the composable; this helper
  * remains for one-off searches that still need a network fetch.
  * @param {{ q: string, limit?: number, skip?: number, signal?: AbortSignal }} params
  */
 export async function searchProducts({ q, limit = 12, skip = 0, signal } = {}) {
-  const query = String(q ?? "").trim().toLowerCase();
+  const query = String(q ?? "")
+    .trim()
+    .toLowerCase();
 
   if (!query) {
     return fetchProducts({ limit, skip, signal });

@@ -7,7 +7,7 @@
  * - `router.replace` — update the address bar without flooding browser history
  *
  * Example:
- *   /?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=200&sort=price-asc&page=2
+ *   /?q=phone&category=smartphones&brand=Apple&size=M&minPrice=50&maxPrice=200&sort=price-asc&page=2
  */
 import { watch, nextTick, unref } from "vue";
 import { useRoute, useRouter } from "vue-router";
@@ -93,6 +93,7 @@ function queriesMatch(a, b) {
  * @param {import('vue').Ref<boolean> | boolean} options.isPriceFiltered
  * @param {import('vue').Ref<number>} options.page
  * @param {(n: number) => void} options.goToPage
+ * @param {import('vue').Ref<number> | number} [options.total] — filtered result count (re-apply page after hydrate)
  */
 export function useListingQuerySync(options) {
   const {
@@ -103,6 +104,7 @@ export function useListingQuerySync(options) {
     isPriceFiltered,
     page,
     goToPage,
+    total,
   } = options;
 
   const route = useRoute();
@@ -126,6 +128,9 @@ export function useListingQuerySync(options) {
     }
     if (filters.colors.length > 0) {
       q.color = filters.colors.join(",");
+    }
+    if (filters.sizes.length > 0) {
+      q.size = filters.sizes.join(",");
     }
     if (filters.ratings.length > 0) {
       q.rating = filters.ratings.join(",");
@@ -165,6 +170,7 @@ export function useListingQuerySync(options) {
     filters.categories = parseList(routeQuery.category).slice(0, 1);
     filters.brands = parseList(routeQuery.brand);
     filters.colors = parseList(routeQuery.color);
+    filters.sizes = parseList(routeQuery.size);
     filters.ratings = parseNumbers(routeQuery.rating);
     filters.discounts = parseNumbers(routeQuery.discount);
     filters.inStockOnly =
@@ -198,6 +204,7 @@ export function useListingQuerySync(options) {
     const pageNum = Number(routeQuery.page);
 
     // Let usePagination’s “filters changed → page 1” watch run first, then restore page.
+    // While the catalog is empty, goToPage keeps the bookmark page (no clamp-to-1).
     await nextTick();
     if (Number.isFinite(pageNum) && pageNum >= 1) {
       goToPage(pageNum);
@@ -253,4 +260,27 @@ export function useListingQuerySync(options) {
       }
     },
   );
+
+  /**
+   * Hard refresh with `?page=2`: first URL→state often runs while total is 0.
+   * After products arrive (0 → N), re-apply the URL page so goToPage can clamp
+   * against the real totalPages. syncingFromUrl avoids a state→URL feedback loop.
+   */
+  if (total != null) {
+    watch(
+      () => unref(total),
+      async (count, prevCount) => {
+        if (prevCount !== 0 || count === 0) return;
+
+        const pageNum = Number(route.query.page);
+        if (!Number.isFinite(pageNum) || pageNum < 1) return;
+        if (page.value === pageNum) return;
+
+        syncingFromUrl = true;
+        goToPage(pageNum);
+        await nextTick();
+        syncingFromUrl = false;
+      },
+    );
+  }
 }

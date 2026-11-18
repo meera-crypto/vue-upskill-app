@@ -1,16 +1,18 @@
 /**
  * useSearchSuggestions — product suggestions for the header search dropdown.
  *
- * Matches the typed search text against product title, brand, and tags
- * (same rules as listing search). Matched search text is highlighted in
- * the title when possible; otherwise the matching tag is shown as meta.
+ * Matches the typed search text against product title, brand, tags, and
+ * category (same rules as listing search). When a category chip is selected,
+ * suggestions are scoped to that category (AND — same as the listing).
+ * Matched search text is highlighted in the title; brand / tag / category
+ * meta explains why a non-title match appeared.
  *
- * Vue idea: `computed` recalculates whenever the query or catalog changes.
+ * Vue idea: `computed` recalculates whenever the query, category, or catalog changes.
  */
 import { computed, toValue } from "vue";
 import { useProducts } from "@/composables/useProducts.js";
 import {
-  matchingProductTag,
+  matchingSearchMeta,
   productMatchesSearch,
 } from "@/services/productService.js";
 
@@ -49,20 +51,31 @@ export function highlightSearchText(label, query) {
 
 /**
  * @param {import('vue').MaybeRefOrGetter<string>} querySource
- * @param {{ maxProducts?: number }} [options]
+ * @param {{
+ *   maxProducts?: number,
+ *   categorySource?: import('vue').MaybeRefOrGetter<string | string[] | null | undefined>,
+ * }} [options]
  */
 export function useSearchSuggestions(querySource, options = {}) {
   const maxProducts = options.maxProducts ?? MAX_PRODUCTS;
+  const categorySource = options.categorySource;
   const { catalog } = useProducts({ immediate: false });
 
   /**
    * @typedef {{
    *   id: string,
    *   label: string,
-   *   matchedTag: string,
+   *   matchedMeta: string,
    *   product: Record<string, unknown>
    * }} Suggestion
    */
+
+  const activeCategory = computed(() => {
+    if (categorySource == null) return "";
+    const raw = toValue(categorySource);
+    if (Array.isArray(raw)) return String(raw[0] ?? "").trim();
+    return String(raw ?? "").trim();
+  });
 
   const suggestions = computed(() => {
     const raw = String(toValue(querySource) ?? "").trim();
@@ -72,17 +85,20 @@ export function useSearchSuggestions(querySource, options = {}) {
     const items = [];
     if (q.length < 1) return items;
 
+    const category = activeCategory.value;
+
     for (const product of catalog.value) {
+      // AND with selected category — same rule as the listing results.
+      if (category && product?.category !== category) continue;
       if (!productMatchesSearch(product, q)) continue;
 
       const title = String(product?.title ?? "") || "Product";
-      const titleMatch = title.toLowerCase().includes(q);
-      const matchedTag = titleMatch ? "" : matchingProductTag(product, q);
+      const matchedMeta = matchingSearchMeta(product, q);
 
       items.push({
         id: `product:${product.id}`,
         label: title,
-        matchedTag,
+        matchedMeta,
         product,
       });
 

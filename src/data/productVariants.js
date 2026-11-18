@@ -341,9 +341,7 @@ export const PRODUCT_VARIANT_OVERLAYS = {
 
   /** Lipstick — color shades only. */
   4: {
-    options: [
-      { name: "Color", values: ["Red", "Pink", "Brown", "Nude"] },
-    ],
+    options: [{ name: "Color", values: ["Red", "Pink", "Brown", "Nude"] }],
     variants: [
       {
         id: "4-red",

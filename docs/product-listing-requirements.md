@@ -20,7 +20,7 @@ Build a responsive e-commerce product listing page in Vue 3 using a dummy API. T
 
 Recommended page sections, from top to bottom:
 
-1. Header: logo; global search on tablet+; account/wishlist/cart entry points.
+1. Header: logo; global search on tablet+; account (`/account`), wishlist, and cart entry points.
    - Mobile (&lt;768px): logo in the top bar; Favorites / Cart / Profile in a fixed bottom icon bar (no hamburger drawer).
    - Tablet+ (≥768px): search centered in the header; icons inline in the header bar.
    - Category strip is always reserved (skeleton chips while the catalog loads) so header height does not shift when categories appear.
@@ -52,13 +52,14 @@ Recommended page sections, from top to bottom:
 
 ### 3.2 Search
 
-- Search by product name, brand, and tags; category search can be added.
+- Search by product name, brand, tags, and category (slug or label).
 - Use case-insensitive partial matching.
-- Header search shows a product suggestions dropdown while typing (title / brand / tags; matched search text highlighted); choosing a product opens details.
+- Header search shows a product suggestions dropdown while typing (title / brand / tags / category; matched search text highlighted in the title; brand / tag / category shown as meta when that is why it matched); choosing a product opens details.
+- Suggestions respect the selected category chip (AND — same as listing results). With no category selected, suggestions search the full catalog.
 - Suggestions include a View all action at the bottom that applies the typed query on the listing; keyboard arrows reach every suggestion (including those below the fold) and View all.
 - Provide a clear-search action and display the result count.
 - Debounce API-backed search by approximately 250–350 ms.
-- Header search works with category as AND filters: keep the selected category (and its URL/`category` chip) while searching. Results are scoped to that category. If the query has no matches inside it (including when matches exist only in other categories), show the empty state and leave the chip selected so the user can clear search, clear the category, or pick another. Keep other filters (brand, price, rating, stock, color, discount) and sort.
+- Header search works with category as AND filters: keep the selected category (and its URL/`category` chip) while searching. Results are scoped to that category. If the query has no matches inside it (including when matches exist only in other categories), show the empty state and leave the chip selected so the user can clear search, clear the category, or pick another. Keep other filters (brand, price, rating, stock, color, size, discount) and sort.
 - Keep other current filters and sort when the search changes.
 - Show a useful no-results state and allow users to clear the query.
 - Prevent stale responses from replacing newer results; use AbortController for obsolete requests.
@@ -80,22 +81,23 @@ Recommended page sections, from top to bottom:
 - Use AND logic across different groups (e.g., brand AND price AND in-stock).
 - Brand options depend on category: with a category selected, show only brands that appear in that category; with no category, show all brands. Drop brand selections that fall outside the updated option list when the category changes. If the scoped brand list is empty, show “No brands found” in the Brand filter panel.
 - Color filter accordion is always mounted (like Brand). While color options are empty (e.g. catalog still loading), show “No colors found” in the panel instead of hiding the whole Color section (avoids layout shift when swatches arrive).
+- Size filter accordion is always mounted (like Color). Size options come from products that have a Size variant option; scoped to the selected category when one is active (categories without sizes show “No sizes found”). Drop size selections that fall outside the updated option list when the category changes. URL sync uses `size=` (comma-separated).
 - Show active filter chips and allow each one to be removed independently.
 - Provide Clear All and preserve unrelated filters when one filter changes.
 - Update the result count and handle zero-result combinations.
-- On mobile, allow users to apply multiple choices before closing the filter drawer.
+- On mobile, filters **live-apply** while the drawer stays open so shoppers can change several controls before closing (no separate draft + Apply step). Drawer supports Escape, focus trap, and restore-focus on close.
 
 ### 3.4 Sorting
 
-| Option             | Expected behavior                                            |
-| ------------------ | ------------------------------------------------------------ |
-| Featured           | Use a defined featured-first order and predictable fallback. |
-| Price: Low to High | Sort by ascending current price.                             |
-| Price: High to Low | Sort by descending current price.                            |
-| Newest             | Sort by publication/creation date where available.           |
-| Customer Rating    | Sort by rating; define behavior for unrated products.        |
-| Best Selling       | Use sales count if available.                                |
-| Biggest Discount   | Sort by discount percentage, not raw savings amount.         |
+| Option             | Expected behavior                                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Featured           | Prefer API / local `isFeatured` (`productSortMeta`); else rating ≥ 4.5 or discount ≥ 20%. Featured first, then rating, then id. |
+| Price: Low to High | Sort by ascending current price.                                                                                                |
+| Price: High to Low | Sort by descending current price.                                                                                               |
+| Newest             | Sort by `createdAt` (`meta.createdAt` / `createdAt`) when available; else higher id.                                            |
+| Customer Rating    | Sort by rating; define behavior for unrated products.                                                                           |
+| Best Selling       | Prefer API `salesCount` / `unitsSold` / `sold`, then local overlay; else stable id-based fallback (not plain review count).     |
+| Biggest Discount   | Sort by discount percentage, not raw savings amount.                                                                            |
 
 Sorting must not clear filters or search. Changing filters/search should reset pagination to a valid first page.
 
@@ -107,6 +109,7 @@ Sorting must not clear filters or search. Changing filters/search should reset p
 - Preserve search, filters, and sort while navigating pages or loading more.
 - Reset to page 1 (and reset the mobile visible batch to 12) after a search/filter change.
 - Handle pages that become invalid after the result set changes.
+- Hard refresh / shared links with `?page=N` must restore that page after the catalog loads (do not treat empty→loaded as a filter change that resets to page 1, and do not strip `page` from the URL while the list is still empty).
 - For client-side processing, use this order: **Search → Filter → Sort → Paginate**. With server-side processing, the API should apply equivalent logic and return page metadata.
 
 ## 4. Dummy API and Data Contract
@@ -174,12 +177,12 @@ Components are grouped by role under `src/components/`. Cart and wishlist state 
 - [x] components/product: `ProductCard.vue`, `ProductGrid.vue`, `ProductPrice.vue`, `ProductRating.vue`, `QuickViewModal.vue`, `ProductCarousel.vue`, `RecentlyViewedProducts.vue`, `ProductCompare.vue`.
 - [x] components/listing: `ProductSearch.vue`, `FilterSidebar.vue`, `FilterGroup.vue`, `ActiveFilterChips.vue`, `SortDropdown.vue`, `ProductPagination.vue`, `ProductSkeleton.vue`, `EmptyState.vue`.
 - [x] components/cart: `CartButton.vue`.
-- [x] composables: `useProducts.js`, `useProductFilters.js`, `useCart.js`, `useWishlist.js`, `useProductDetail.js`, `usePagination.js`, `useListingQuerySync.js`, `useSearchSuggestions.js`, `useRecentlyViewed.js`, `useAppHeader.js`, `useToast.js`, `useHorizontalScroll.js`.
+- [x] composables: `useProducts.js`, `useProductFilters.js`, `useCart.js`, `useWishlist.js`, `useProductDetail.js`, `usePagination.js`, `useListingQuerySync.js`, `useSearchSuggestions.js`, `useRecentlyViewed.js`, `useAppHeader.js`, `useToast.js`, `useHorizontalScroll.js`, `useFocusTrap.js`.
 - [x] services: `productService.js`.
 - [ ] stores: optional `cartStore.js` initially (deferred; `useCart` / `useWishlist` cover shared state).
-- [x] views: `ProductListingPage.vue`, `ProductDetailsPage.vue`, `FavoritesPage.vue`, `CartPage.vue`, `404Page.vue`.
+- [x] views: `ProductListingPage.vue`, `ProductDetailsPage.vue`, `FavoritesPage.vue`, `CartPage.vue`, `AccountPage.vue`, `404Page.vue`.
 - [x] router: `index.js`.
-- [x] supporting: `utils/` (`productRoutes.js`, `variants.js`, `similarProducts.js`, `compareProducts.js`, …), `data/productVariants.js`, `constants/breakpoints.js`, `App.vue`.
+- [x] supporting: `utils/` (`productRoutes.js`, `variants.js`, `similarProducts.js`, `compareProducts.js`, …), `data/productVariants.js`, `data/productSortMeta.js`, `constants/breakpoints.js`, `App.vue`.
 
 | Layer       | Responsibility                                            |
 | ----------- | --------------------------------------------------------- |
@@ -193,8 +196,14 @@ Components are grouped by role under `src/components/`. Cart and wishlist state 
 ### Site 404 page
 
 - Unknown paths use a catch-all route (`/:pathMatch(.*)*`, name `404-page`) that renders `404Page`.
-- The page shows a clear “404 page” title and a Browse products action (no breadcrumbs).
+- The page shows a clear “404 page” title and a Browse products action (no breadcrumbs). Uses shared `EmptyState` with `variant="not-found"`.
 - Product-details missing/invalid IDs still use the in-page `EmptyState` on `/product` (not a hard redirect to the site 404).
+
+### Account page
+
+- Path: `/account` (route name `account`). Guest placeholder — no auth in this demo.
+- Header Profile icon and footer “Your Account” link here.
+- Shortcuts to Favorites, Cart, and Browse products.
 
 ### Product details route
 
@@ -245,7 +254,7 @@ Vue guide: https://vuejs.org/guide/introduction.html
 - Provide a “Skip to main content” link as the first focusable element in `App.vue`, targeting the shared `#main-content` landmark that wraps `RouterView`.
 - Label search, sorting, and filter controls.
 - Provide meaningful alt text for product images.
-- Make modals keyboard-accessible and manage focus correctly.
+- Make modals and the mobile filter drawer keyboard-accessible (focus trap, Escape to close, restore focus).
 - Announce cart updates and important feedback to assistive technology.
 - Use sufficient text contrast and appropriately sized touch targets.
 - Aim for WCAG 2.2 AA where practical.
@@ -263,20 +272,20 @@ WCAG 2.2: https://www.w3.org/TR/WCAG22/
 
 ## 7. Optional / Advanced Features
 
-| Feature              | Benefit                                                                                                                              | Priority      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| URL-synced filters   | Shareable/bookmarkable listing state                                                                                                 | High          |
-| Skeleton loading     | Improves perceived loading experience (`ProductSkeleton` on listing; filter sidebar uses CSS min-heights; details page skeleton)     | High (done)   |
-| Persistent cart      | Retains cart after refresh                                                                                                           | High          |
-| Toast notifications  | Confirms actions and explains errors (`success` / `info` / `favorite` / `error`)                                                     | High (done)   |
-| Wishlist             | Save products for later                                                                                                              | Medium        |
-| Quick View           | Preview without leaving listing                                                                                                      | Medium        |
-| Product comparison   | Details-page compare: same category + all tags matched (any brand); 2–4 products; table below reviews (`ProductCompare`)             | Medium (done) |
-| Recently viewed      | Return to previously explored products (`useRecentlyViewed` + listing/details row)                                                   | Medium (done) |
-| Variant selection    | Choose color/size before adding (API/local overlay + PDP pickers + variant cart lines; listing card hover preview + mobile View all) | Medium (done) |
+| Feature              | Benefit                                                                                                                              | Priority           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| URL-synced filters   | Shareable/bookmarkable listing state                                                                                                 | High               |
+| Skeleton loading     | Improves perceived loading experience (`ProductSkeleton` on listing; filter sidebar uses CSS min-heights; details page skeleton)     | High (done)        |
+| Persistent cart      | Retains cart after refresh                                                                                                           | High               |
+| Toast notifications  | Confirms actions and explains errors (`success` / `info` / `favorite` / `error`)                                                     | High (done)        |
+| Wishlist             | Save products for later                                                                                                              | Medium             |
+| Quick View           | Preview without leaving listing                                                                                                      | Medium             |
+| Product comparison   | Details-page compare: same category + all tags matched (any brand); 2–4 products; table below reviews (`ProductCompare`)             | Medium (done)      |
+| Recently viewed      | Return to previously explored products (`useRecentlyViewed` + listing/details row)                                                   | Medium (done)      |
+| Variant selection    | Choose color/size before adding (API/local overlay + PDP pickers + variant cart lines; listing card hover preview + mobile View all) | Medium (done)      |
 | Back-in-stock alerts | Express interest in unavailable products (details “Notify me” toast; no email backend yet)                                           | Advanced (partial) |
 
-Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=100&inStock=1&sort=price-asc&page=2` (also accepts `/products?…`). Implemented via Vue Router + `useListingQuerySync`: search, filters (including Availability → In stock), sort, and page restore after refresh and stay shareable/bookmarkable.
+Example URL: `/?q=phone&category=smartphones&brand=Apple&size=M&minPrice=50&maxPrice=100&inStock=1&sort=price-asc&page=2` (also accepts `/products?…`). Implemented via Vue Router + `useListingQuerySync`: search, filters (including Availability → In stock and Size), sort, and page restore after refresh and stay shareable/bookmarkable.
 
 ## 8. Edge Cases and Business Rules
 
@@ -288,7 +297,7 @@ Example URL: `/?q=phone&category=smartphones&brand=Apple&minPrice=50&maxPrice=10
 | No rating/reviews               | Hide the rating or show an unavailable state; do not invent data.                                                                                                                                                                                      |
 | No compare peers                | Hide “Compare with similar” and the compare section when no same-category peer has an identical tag set.                                                                                                                                               |
 | Compare at max (4)              | Disable adding more peers; current product stays locked. Clear selection or remove a peer to free a slot.                                                                                                                                              |
-| Out of stock                    | Details: quantity stepper stays visible but disabled; Add to cart stays disabled; Buy now becomes Notify me (toast confirmation). Listing cards keep their existing out-of-stock CTA.                                                                   |
+| Out of stock                    | Details: quantity stepper stays visible but disabled; Add to cart stays disabled; Buy now becomes Notify me (toast confirmation). Listing cards keep their existing out-of-stock CTA.                                                                  |
 | Invalid discount                | Do not show negative or misleading savings.                                                                                                                                                                                                            |
 | Filters changed on a later page | Reset to a valid page, normally page 1.                                                                                                                                                                                                                |
 | Rapid search changes            | Prevent stale responses from overwriting current results.                                                                                                                                                                                              |
@@ -368,8 +377,8 @@ For the first version, keep the scope focused:
 - DummyJSON
 - Responsive product cards
 - Search by name/brand
-- Category / brand / price / rating / stock filters
-- Featured and price/rating sorting
+- Category / brand / price / rating / stock / color / size / discount filters
+- Featured and price/rating sorting (plus Best Selling / Newest / Biggest Discount with documented data sources)
 - 12 products per page
 - Simulated cart and wishlist
 - Mobile filter drawer

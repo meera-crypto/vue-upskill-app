@@ -99,11 +99,7 @@ function lineMax(product) {
 
       <template v-else>
         <ul class="cart-page__list" aria-label="Cart items">
-          <li
-            v-for="line in cartLines"
-            :key="line.key"
-            class="cart-line"
-          >
+          <li v-for="line in cartLines" :key="line.key" class="cart-line">
             <div class="cart-line__media">
               <img
                 class="cart-line__image"

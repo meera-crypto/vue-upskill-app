@@ -29,6 +29,14 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  /**
+   * Selected category slug (listing chip). Suggestions AND with this —
+   * same rule as listing results. Empty = search the full catalog.
+   */
+  selectedCategory: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["update:searchQuery", "clear-search"]);
@@ -45,7 +53,10 @@ const activeSuggestion = ref(-1);
 let blurCloseTimer = null;
 
 const searchQueryRef = computed(() => props.searchQuery);
-const { suggestions, hasSuggestions } = useSearchSuggestions(searchQueryRef);
+const selectedCategoryRef = computed(() => props.selectedCategory);
+const { suggestions, hasSuggestions } = useSearchSuggestions(searchQueryRef, {
+  categorySource: selectedCategoryRef,
+});
 
 const showSuggestions = computed(
   () =>
@@ -122,7 +133,11 @@ function viewAllResults() {
 
   const q = props.searchQuery.trim();
   if (router.currentRoute.value.name !== "products") {
-    router.push({ name: "products", query: q ? { q } : {} });
+    /** @type {Record<string, string>} */
+    const query = {};
+    if (q) query.q = q;
+    if (props.selectedCategory) query.category = props.selectedCategory;
+    router.push({ name: "products", query });
   }
 }
 
@@ -188,16 +203,14 @@ function onSearchKeydown(event) {
 
   if (event.key === "ArrowDown") {
     event.preventDefault();
-    const next =
-      activeSuggestion.value < last ? activeSuggestion.value + 1 : 0;
+    const next = activeSuggestion.value < last ? activeSuggestion.value + 1 : 0;
     moveActiveSuggestion(next);
     return;
   }
 
   if (event.key === "ArrowUp") {
     event.preventDefault();
-    const next =
-      activeSuggestion.value > 0 ? activeSuggestion.value - 1 : last;
+    const next = activeSuggestion.value > 0 ? activeSuggestion.value - 1 : last;
     moveActiveSuggestion(next);
     return;
   }
@@ -257,7 +270,7 @@ onUnmounted(() => {
         id="header-search-input"
         type="search"
         class="header-search__input"
-        placeholder="Search by name, brand, or tag"
+        placeholder="Search by name, brand, tag, or category"
         autocomplete="off"
         role="combobox"
         aria-autocomplete="list"
@@ -316,6 +329,24 @@ onUnmounted(() => {
                 <template
                   v-for="(part, partIndex) in suggestionLabelParts(item.label)"
                   :key="`${item.id}-${partIndex}`"
+                >
+                  <mark
+                    v-if="part.match"
+                    class="header-search__suggestion-mark"
+                    >{{ part.text }}</mark
+                  >
+                  <template v-else>{{ part.text }}</template>
+                </template>
+              </span>
+              <span
+                v-if="item.matchedMeta"
+                class="header-search__suggestion-meta"
+              >
+                <template
+                  v-for="(part, partIndex) in suggestionLabelParts(
+                    item.matchedMeta,
+                  )"
+                  :key="`${item.id}-meta-${partIndex}`"
                 >
                   <mark
                     v-if="part.match"

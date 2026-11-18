@@ -9,13 +9,7 @@
  * Used by ProductCarousel so Similar products and Recently viewed share
  * one scroll implementation.
  */
-import {
-  nextTick,
-  onMounted,
-  onUnmounted,
-  ref,
-  watch,
-} from "vue";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 
 /**
  * @param {import('vue').Ref<HTMLElement | null>} scrollEl

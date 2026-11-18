@@ -168,7 +168,9 @@ const discountPercentLabel = computed(() => {
 const hasRating = computed(() => typeof props.product.rating === "number");
 
 /** CSS modifier for the badge background (red → green by score). */
-const ratingBadgeTone = computed(() => getRatingBadgeTone(props.product.rating));
+const ratingBadgeTone = computed(() =>
+  getRatingBadgeTone(props.product.rating),
+);
 
 const ratingLabel = computed(() => {
   if (!hasRating.value) return "";
@@ -317,10 +319,7 @@ const detailsTo = computed(() =>
         >
           <picture class="product-card__picture">
             <!-- untilMd: smaller file below the md layout step. -->
-            <source
-              :media="mediaQueries.untilMd"
-              :srcset="mobileImageSrc"
-            />
+            <source :media="mediaQueries.untilMd" :srcset="mobileImageSrc" />
             <img
               class="product-card__image"
               :src="displayImage"

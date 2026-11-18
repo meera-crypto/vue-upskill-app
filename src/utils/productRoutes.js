@@ -121,9 +121,7 @@ export function selectedOptionsFromQuery(product, query) {
  */
 export function productDetailsTo(productOrId, slugOrOptions) {
   const fromObject =
-    productOrId != null && typeof productOrId === "object"
-      ? productOrId
-      : null;
+    productOrId != null && typeof productOrId === "object" ? productOrId : null;
 
   const id = fromObject ? fromObject.id : productOrId;
 

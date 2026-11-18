@@ -183,6 +183,8 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     brands: [],
     /** @type {string[]} color names */
     colors: [],
+    /** @type {string[]} size option values (only products that have Size) */
+    sizes: [],
     /** @type {number[]} minimum rating thresholds (e.g. 4 = 4★ & up) */
     ratings: [],
     /** @type {number[]} minimum discount % thresholds */
@@ -259,10 +261,12 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     const categoriesMap = new Map();
     const brands = new Set();
     const colors = new Set();
-    // Brand list depends on category: selected category → brands in that
-    // category only; no category → every brand in the catalog.
+    const sizes = new Set();
+    // Brand / size lists depend on category: selected category → options
+    // that appear in that category only; no category → whole catalog.
+    // Size only appears for products that actually have a Size option.
     const selectedCategories = filters.categories;
-    const brandProducts =
+    const scopedProducts =
       selectedCategories.length > 0
         ? catalogList.value.filter((product) =>
             selectedCategories.includes(product?.category),
@@ -281,8 +285,11 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       }
     }
 
-    for (const product of brandProducts) {
+    for (const product of scopedProducts) {
       if (product?.brand) brands.add(product.brand);
+      for (const size of product?.sizes ?? []) {
+        if (size) sizes.add(size);
+      }
     }
 
     return {
@@ -297,6 +304,8 @@ export function useProductFilters(sourceProducts, catalogProducts) {
           label: name.charAt(0).toUpperCase() + name.slice(1),
           hex: COLOR_SWATCH_HEX[name] ?? "#ccc",
         })),
+      // Natural size order when values look like clothing sizes; else A–Z.
+      sizes: [...sizes].sort(compareSizeLabels),
       ratings: RATING_FILTER_OPTIONS,
       discounts: DISCOUNT_FILTER_OPTIONS,
       sorts: SORT_OPTIONS,
@@ -304,11 +313,11 @@ export function useProductFilters(sourceProducts, catalogProducts) {
   });
 
   /**
-   * When the category changes, drop brand selections that are no longer
-   * in the brand checkbox list (avoids invisible chips / empty results).
+   * When the category changes, drop brand / size selections that are no
+   * longer in the option list (avoids invisible chips / empty results).
    *
-   * Wait until the catalog has loaded. On refresh, URL sync restores brands
-   * first; if we prune against an empty option list, every brand is wiped
+   * Wait until the catalog has loaded. On refresh, URL sync restores values
+   * first; if we prune against an empty option list, every value is wiped
    * and then written back out of the URL.
    */
   watch(
@@ -318,6 +327,16 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       if (catalogList.value.length === 0) return;
       const allowed = new Set(availableBrands);
       filters.brands = filters.brands.filter((brand) => allowed.has(brand));
+    },
+  );
+
+  watch(
+    () => filterOptions.value.sizes,
+    (availableSizes) => {
+      if (filters.sizes.length === 0) return;
+      if (catalogList.value.length === 0) return;
+      const allowed = new Set(availableSizes);
+      filters.sizes = filters.sizes.filter((size) => allowed.has(size));
     },
   );
 
@@ -331,6 +350,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       filters.categories.length > 0 ||
       filters.brands.length > 0 ||
       filters.colors.length > 0 ||
+      filters.sizes.length > 0 ||
       filters.ratings.length > 0 ||
       filters.discounts.length > 0 ||
       filters.inStockOnly ||
@@ -358,6 +378,12 @@ export function useProductFilters(sourceProducts, catalogProducts) {
           productColors.includes(c),
         );
         if (!matchesColor) return false;
+      }
+
+      if (filters.sizes.length > 0) {
+        const productSizes = product.sizes ?? [];
+        const matchesSize = filters.sizes.some((s) => productSizes.includes(s));
+        if (!matchesSize) return false;
       }
 
       if (filters.ratings.length > 0) {
@@ -424,6 +450,15 @@ export function useProductFilters(sourceProducts, catalogProducts) {
         group: "colors",
         value,
         label: opt?.label ?? value,
+      });
+    }
+
+    for (const value of filters.sizes) {
+      chips.push({
+        id: `size:${value}`,
+        group: "sizes",
+        value,
+        label: `Size ${value}`,
       });
     }
 
@@ -497,6 +532,10 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     toggleArrayValue(filters.colors, value);
   }
 
+  function toggleSize(value) {
+    toggleArrayValue(filters.sizes, value);
+  }
+
   function toggleRating(value) {
     toggleArrayValue(filters.ratings, value);
   }
@@ -558,6 +597,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     filters.categories = [];
     filters.brands = [];
     filters.colors = [];
+    filters.sizes = [];
     filters.ratings = [];
     filters.discounts = [];
     filters.inStockOnly = false;
@@ -577,6 +617,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     toggleCategory,
     toggleBrand,
     toggleColor,
+    toggleSize,
     toggleRating,
     toggleDiscount,
     toggleInStock,
@@ -585,4 +626,24 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     removeChip,
     clearFilters,
   };
+}
+
+/** Prefer common clothing size order; fall back to localeCompare. */
+const SIZE_ORDER = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
+
+/**
+ * @param {string} a
+ * @param {string} b
+ * @returns {number}
+ */
+function compareSizeLabels(a, b) {
+  const ia = SIZE_ORDER.indexOf(String(a).toUpperCase());
+  const ib = SIZE_ORDER.indexOf(String(b).toUpperCase());
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  const numA = Number(a);
+  const numB = Number(b);
+  if (Number.isFinite(numA) && Number.isFinite(numB)) return numA - numB;
+  return String(a).localeCompare(String(b), undefined, { numeric: true });
 }

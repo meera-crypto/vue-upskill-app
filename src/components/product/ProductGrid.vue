@@ -10,7 +10,7 @@
  * Filter state lives in App (useProductFilters). This component receives
  * the filtered products + helpers via props and forwards user actions up.
  */
-import { ref, computed, onUnmounted, watch } from "vue";
+import { ref, computed, onUnmounted, watch, useTemplateRef } from "vue";
 import { SlidersHorizontal } from "@lucide/vue";
 import ProductCard from "@/components/product/ProductCard.vue";
 import ProductSkeleton from "@/components/listing/ProductSkeleton.vue";
@@ -20,6 +20,7 @@ import ActiveFilterChips from "@/components/listing/ActiveFilterChips.vue";
 import ProductPagination from "@/components/listing/ProductPagination.vue";
 import SortDropdown from "@/components/listing/SortDropdown.vue";
 import { SORT_OPTIONS } from "@/composables/useProductFilters.js";
+import { useFocusTrap } from "@/composables/useFocusTrap.js";
 
 const props = defineProps({
   products: {
@@ -118,6 +119,7 @@ const emit = defineEmits([
   "see-all-options",
   "toggle-brand",
   "toggle-color",
+  "toggle-size",
   "toggle-rating",
   "toggle-discount",
   "toggle-in-stock",
@@ -133,6 +135,13 @@ const emit = defineEmits([
 ]);
 /** Mobile filter drawer open/closed. */
 const filtersOpen = ref(false);
+/** FilterSidebar component instance — `$el` is the drawer `<aside>`. */
+const filterSidebarRef = useTemplateRef("filterSidebarRef");
+const filterDrawerEl = computed(() => {
+  const inst = filterSidebarRef.value;
+  const el = inst && "$el" in inst ? inst.$el : null;
+  return el instanceof HTMLElement ? el : null;
+});
 
 function openFilters() {
   filtersOpen.value = true;
@@ -141,6 +150,12 @@ function openFilters() {
 function closeFilters() {
   filtersOpen.value = false;
 }
+
+/**
+ * Keyboard a11y for the mobile drawer: Tab stays inside, Escape closes,
+ * focus returns to the Filters button (useFocusTrap restores previous focus).
+ */
+useFocusTrap(filterDrawerEl, filtersOpen, { onEscape: closeFilters });
 
 /** Lock body scroll while the drawer is open. */
 watch(filtersOpen, (open) => {
@@ -256,12 +271,16 @@ const showEmptyFilterActions = computed(
         -->
         <FilterSidebar
           id="product-filters"
+          ref="filterSidebarRef"
           :filters="filters"
           :options="filterOptions"
           :price-bounds="priceBounds"
           :drawer-open="filtersOpen"
+          :aria-modal="filtersOpen ? 'true' : undefined"
+          :role="filtersOpen ? 'dialog' : undefined"
           @toggle-brand="emit('toggle-brand', $event)"
           @toggle-color="emit('toggle-color', $event)"
+          @toggle-size="emit('toggle-size', $event)"
           @toggle-rating="emit('toggle-rating', $event)"
           @toggle-discount="emit('toggle-discount', $event)"
           @toggle-in-stock="emit('toggle-in-stock')"

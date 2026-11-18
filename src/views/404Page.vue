@@ -23,10 +23,11 @@ function continueShopping() {
     <div class="container page-404__inner">
       <header class="page-404__header">
         <p class="page-404__code" aria-hidden="true">404</p>
-        <h1 class="page-404__title">Page not found</h1>
+        <h1 class="page-404__title">404 page</h1>
       </header>
 
       <EmptyState
+        variant="not-found"
         message="We couldn’t find that page. Check the address or head back to the product listing."
       >
         <template #actions>

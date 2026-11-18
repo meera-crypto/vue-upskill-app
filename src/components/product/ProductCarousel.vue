@@ -48,12 +48,8 @@ const props = defineProps({
 const scrollEl = useTemplateRef("scrollEl");
 const watchKeyRef = toRef(props, "watchKey");
 
-const {
-  canOverflow,
-  canScrollLeft,
-  canScrollRight,
-  scrollByDirection,
-} = useHorizontalScroll(scrollEl, watchKeyRef);
+const { canOverflow, canScrollLeft, canScrollRight, scrollByDirection } =
+  useHorizontalScroll(scrollEl, watchKeyRef);
 
 const prevLabel = computed(() => `Scroll ${props.listLabel} left`);
 const nextLabel = computed(() => `Scroll ${props.listLabel} right`);
@@ -70,11 +66,7 @@ const nextLabel = computed(() => `Scroll ${props.listLabel} right`);
     </h2>
 
     <div class="product-carousel__viewport">
-      <ul
-        ref="scrollEl"
-        class="product-carousel__list"
-        :aria-label="listLabel"
-      >
+      <ul ref="scrollEl" class="product-carousel__list" :aria-label="listLabel">
         <slot />
       </ul>
 

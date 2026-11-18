@@ -1,0 +1,26 @@
+/* Account page — guest placeholder */
+
+.account-page {
+  padding-block: 1.5rem 3rem;
+  min-height: 50vh;
+}
+
+.account-page__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.account-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+
+.account-page__title {
+  margin: 0;
+  font-size: var(--font-size-h3);
+  line-height: var(--line-height-h3);
+  color: var(--color-primary);
+}

@@ -55,12 +55,16 @@ defineEmits(["select"]);
           type="button"
           class="product-card__quick-option"
           :class="{
-            'product-card__quick-option--swatch':
-              !!swatchHexFor(group.name, value),
+            'product-card__quick-option--swatch': !!swatchHexFor(
+              group.name,
+              value,
+            ),
             'product-card__quick-option--selected':
               selectedOptions[group.name] === value,
-            'product-card__quick-option--unavailable':
-              !isAvailable(group.name, value),
+            'product-card__quick-option--unavailable': !isAvailable(
+              group.name,
+              value,
+            ),
           }"
           :style="
             swatchHexFor(group.name, value)

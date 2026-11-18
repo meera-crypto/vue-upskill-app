@@ -12,6 +12,7 @@ import ProductListingPage from "@/views/ProductListingPage.vue";
 import ProductDetailsPage from "@/views/ProductDetailsPage.vue";
 import FavoritesPage from "@/views/FavoritesPage.vue";
 import CartPage from "@/views/CartPage.vue";
+import AccountPage from "@/views/AccountPage.vue";
 import Page404 from "@/views/404Page.vue";
 
 const router = createRouter({
@@ -49,6 +50,11 @@ const router = createRouter({
       path: "/cart",
       name: "cart",
       component: CartPage,
+    },
+    {
+      path: "/account",
+      name: "account",
+      component: AccountPage,
     },
     {
       // Must stay last: matches any path that did not match a route above.

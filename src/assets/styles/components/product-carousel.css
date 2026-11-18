@@ -79,7 +79,11 @@
 }
 
 .product-carousel__arrow:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 35%,
+    var(--color-border)
+  );
   background: var(--color-soft-white);
 }
 

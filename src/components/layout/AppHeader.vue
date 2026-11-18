@@ -12,7 +12,7 @@
  * loads) so header height does not jump when real categories arrive.
  *
  * Mounted once from App.vue (useAppHeader). Cart / favorites counts come from
- * shared composables so badges stay in sync. RouterLink powers Home / Favorites / Cart.
+ * shared composables so badges stay in sync. RouterLink powers Home / Favorites / Cart / Profile.
  */
 import {
   computed,
@@ -23,13 +23,7 @@ import {
   useTemplateRef,
   watch,
 } from "vue";
-import {
-  Home,
-  Heart,
-  User,
-  ChevronLeft,
-  ChevronRight,
-} from "@lucide/vue";
+import { Home, Heart, User, ChevronLeft, ChevronRight } from "@lucide/vue";
 import logoUrl from "@/assets/images/logo.png";
 import { getCategoryIcon } from "@/utils/categoryIcons.js";
 import { useWishlist } from "@/composables/useWishlist.js";
@@ -198,6 +192,7 @@ onUnmounted(() => {
 
         <ProductSearch
           :search-query="searchQuery"
+          :selected-category="selectedCategories[0] ?? ''"
           @update:search-query="emit('update:searchQuery', $event)"
           @clear-search="emit('clear-search')"
         />
@@ -229,10 +224,14 @@ onUnmounted(() => {
                 </span>
               </RouterLink>
               <CartButton />
-              <a href="#profile" class="nav-icon" aria-label="Profile">
+              <RouterLink
+                :to="{ name: 'account' }"
+                class="nav-icon"
+                aria-label="Profile"
+              >
                 <User :size="22" />
                 <span class="nav-label">Profile</span>
-              </a>
+              </RouterLink>
             </div>
           </nav>
         </div>
@@ -280,11 +279,7 @@ onUnmounted(() => {
             </li>
           </ul>
 
-          <ul
-            v-else
-            ref="categoriesScroll"
-            class="header-categories__scroll"
-          >
+          <ul v-else ref="categoriesScroll" class="header-categories__scroll">
             <li
               v-for="category in categories"
               :key="category.value"

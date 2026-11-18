@@ -76,9 +76,7 @@ function persist() {
  * @param {Record<string, unknown> | null} variant
  */
 function buildLineProduct(product, variant) {
-  const stock = variant
-    ? Number(variant.stock)
-    : Number(product.stock);
+  const stock = variant ? Number(variant.stock) : Number(product.stock);
   const max = Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0;
 
   const {
@@ -93,7 +91,7 @@ function buildLineProduct(product, variant) {
     price: variant?.price ?? product.price,
     stock: max,
     image: variant?.image ?? product.image,
-    sku: (variant?.sku || product.sku || ""),
+    sku: variant?.sku || product.sku || "",
     variantId: variant?.id ?? null,
     selectedOptions:
       variant?.options && typeof variant.options === "object"

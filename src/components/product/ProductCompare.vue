@@ -98,9 +98,7 @@ const rows = computed(() => buildCompareRows(columns.value));
 
 const showTable = computed(() => columns.value.length >= COMPARE_MIN);
 
-const canSelectMore = computed(
-  () => selectedPeerIds.value.length < maxPeers,
-);
+const canSelectMore = computed(() => selectedPeerIds.value.length < maxPeers);
 
 const selectionHint = computed(() => {
   const selected = selectedPeerIds.value.length;
@@ -185,8 +183,8 @@ defineExpose({ openPanel, isOpen });
 
     <div v-if="!isOpen" class="product-compare__intro">
       <p class="product-compare__intro-text">
-        Compare this product with others in the same category that share all
-        the same tags — any brand.
+        Compare this product with others in the same category that share all the
+        same tags — any brand.
       </p>
       <button
         type="button"
@@ -255,10 +253,7 @@ defineExpose({ openPanel, isOpen });
                 {{ peer.brand }}
               </span>
             </span>
-            <span
-              class="product-compare__pick-check"
-              aria-hidden="true"
-            >
+            <span class="product-compare__pick-check" aria-hidden="true">
               {{ isPeerSelected(peer.id) ? "✓" : "+" }}
             </span>
           </button>
@@ -266,11 +261,7 @@ defineExpose({ openPanel, isOpen });
       </ul>
 
       <div v-if="selectedPeerIds.length" class="product-compare__actions">
-        <button
-          type="button"
-          class="btn btn--link"
-          @click="clearPeers"
-        >
+        <button type="button" class="btn btn--link" @click="clearPeers">
           Clear selection
         </button>
       </div>
@@ -316,9 +307,7 @@ defineExpose({ openPanel, isOpen });
                   <img
                     class="product-compare__col-image"
                     :src="
-                      column.thumbnail ||
-                      column.image ||
-                      PRODUCT_IMAGE_FALLBACK
+                      column.thumbnail || column.image || PRODUCT_IMAGE_FALLBACK
                     "
                     alt=""
                     width="72"
@@ -334,10 +323,7 @@ defineExpose({ openPanel, isOpen });
                   <span v-else class="product-compare__col-link">
                     {{ column.title || column.name || "Untitled product" }}
                   </span>
-                  <span
-                    v-if="column.brand"
-                    class="product-compare__col-brand"
-                  >
+                  <span v-if="column.brand" class="product-compare__col-brand">
                     {{ column.brand }}
                   </span>
                 </div>

@@ -37,11 +37,7 @@ const emit = defineEmits(["remove", "clear"]);
           </button>
         </li>
       </ul>
-      <button
-        type="button"
-        class="filter-chips__clear"
-        @click="emit('clear')"
-      >
+      <button type="button" class="filter-chips__clear" @click="emit('clear')">
         Clear all
       </button>
     </template>

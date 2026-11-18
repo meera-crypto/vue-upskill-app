@@ -18,7 +18,11 @@
 function normalizeTags(value) {
   if (!Array.isArray(value)) return [];
   return value
-    .map((tag) => String(tag ?? "").trim().toLowerCase())
+    .map((tag) =>
+      String(tag ?? "")
+        .trim()
+        .toLowerCase(),
+    )
     .filter(Boolean);
 }
 

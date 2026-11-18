@@ -46,6 +46,7 @@ const {
   isPriceFiltered,
   toggleBrand,
   toggleColor,
+  toggleSize,
   toggleRating,
   toggleDiscount,
   toggleInStock,
@@ -79,6 +80,7 @@ useListingQuerySync({
   isPriceFiltered,
   page,
   goToPage,
+  total,
 });
 
 /**
@@ -252,6 +254,7 @@ function onPriceMax(value) {
     @see-all-options="seeAllOptions"
     @toggle-brand="toggleBrand"
     @toggle-color="toggleColor"
+    @toggle-size="toggleSize"
     @toggle-rating="toggleRating"
     @toggle-discount="toggleDiscount"
     @toggle-in-stock="toggleInStock"

@@ -35,6 +35,7 @@ const props = defineProps({
 const emit = defineEmits([
   "toggle-brand",
   "toggle-color",
+  "toggle-size",
   "toggle-rating",
   "toggle-discount",
   "toggle-in-stock",
@@ -51,6 +52,7 @@ const openSections = reactive({
   brand: false,
   rating: false,
   color: false,
+  size: false,
   discount: false,
 });
 
@@ -133,6 +135,10 @@ function isColorSelected(value) {
   return props.filters.colors.includes(value);
 }
 
+function isSizeSelected(value) {
+  return props.filters.sizes.includes(value);
+}
+
 /** Small count badge on the header when that group has selections. */
 function selectedCount(key) {
   switch (key) {
@@ -140,6 +146,8 @@ function selectedCount(key) {
       return props.filters.brands.length;
     case "color":
       return props.filters.colors.length;
+    case "size":
+      return props.filters.sizes.length;
     case "rating":
       return props.filters.ratings.length;
     case "discount":
@@ -163,6 +171,7 @@ function selectedCount(key) {
     class="filter-sidebar"
     :class="{ 'filter-sidebar--open': drawerOpen }"
     aria-label="Product filters"
+    :tabindex="drawerOpen ? -1 : undefined"
   >
     <div class="filter-sidebar__header">
       <h2 class="filter-sidebar__title">Filters</h2>
@@ -363,6 +372,36 @@ function selectedCount(key) {
             :title="color.label"
             @click="emit('toggle-color', color.value)"
           />
+        </li>
+      </ul>
+    </FilterGroup>
+
+    <!--
+      Always mounted (like Color). Options are scoped to the selected
+      category when one is active; empty → “No sizes found” (categories
+      without Size variants simply have nothing to pick).
+    -->
+    <FilterGroup
+      title="Size"
+      section-id="size"
+      :open="openSections.size"
+      :count="selectedCount('size')"
+      @toggle="toggleSection('size')"
+    >
+      <p v-if="(options.sizes ?? []).length === 0" class="filter-group__empty">
+        No sizes found
+      </p>
+      <ul v-else class="filter-sizes" role="list">
+        <li v-for="size in options.sizes" :key="size">
+          <button
+            type="button"
+            class="filter-size"
+            :class="{ 'filter-size--selected': isSizeSelected(size) }"
+            :aria-pressed="isSizeSelected(size)"
+            @click="emit('toggle-size', size)"
+          >
+            {{ size }}
+          </button>
         </li>
       </ul>
     </FilterGroup>
