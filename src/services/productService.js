@@ -18,16 +18,23 @@ import { PRODUCT_SORT_META } from "@/data/productSortMeta.js";
 
 /**
  * API origin from `.env` (`VITE_BASE_URL`). Vite only exposes vars prefixed
- * with `VITE_` to client code via `import.meta.env`.
+ * with `VITE_` to client code via `import.meta.env` (inlined at dev/build time).
  * Trailing slashes are stripped so paths like `/products` stay valid.
+ *
+ * Fallback keeps DummyJSON working if `.env` was missing at server start/build;
+ * prefer setting `VITE_BASE_URL` and restarting `npm run dev` / rebuilding.
  */
-const API_BASE = String(import.meta.env.VITE_BASE_URL ?? "")
+const DEFAULT_API_BASE = "https://dummyjson.com";
+
+const API_BASE = String(
+  import.meta.env.VITE_BASE_URL || DEFAULT_API_BASE,
+)
   .trim()
   .replace(/\/+$/, "");
 
-if (!API_BASE) {
+if (!import.meta.env.VITE_BASE_URL && import.meta.env.DEV) {
   console.warn(
-    "[productService] VITE_BASE_URL is missing. Set it in `.env` (see `.env.example`).",
+    "[productService] VITE_BASE_URL is missing — using DummyJSON default. Copy `.env.example` to `.env` and restart the dev server.",
   );
 }
 
