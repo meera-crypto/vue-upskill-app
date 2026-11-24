@@ -1,56 +1,39 @@
 /**
- * Map DummyJSON category slugs → Lucide icons (desktop category strip).
+ * Map storefront category slugs → Lucide icons (desktop category strip).
+ * Slugs match `resolveStorefrontCategory` in categoryGroups.js.
  */
 import {
   Sparkles,
-  Flower2,
   Armchair,
   ShoppingBasket,
   Lamp,
   UtensilsCrossed,
-  Laptop,
   Shirt,
-  Footprints,
-  Watch,
-  Headphones,
   Bike,
   Droplets,
-  Smartphone,
+  Cpu,
   Dumbbell,
   Glasses,
-  Tablet,
   Car,
   ShoppingBag,
-  Gem,
   Tag,
 } from "@lucide/vue";
 
 /** @type {Record<string, import('vue').Component>} */
 const CATEGORY_ICONS = {
   beauty: Sparkles,
-  fragrances: Flower2,
   furniture: Armchair,
   groceries: ShoppingBasket,
-  "home-decoration": Lamp,
-  "kitchen-accessories": UtensilsCrossed,
-  laptops: Laptop,
-  "mens-shirts": Shirt,
-  "mens-shoes": Footprints,
-  "mens-watches": Watch,
-  "mobile-accessories": Headphones,
+  home: Lamp,
+  kitchen: UtensilsCrossed,
+  mens: Shirt,
   motorcycle: Bike,
   "skin-care": Droplets,
-  smartphones: Smartphone,
-  "sports-accessories": Dumbbell,
+  gadgets: Cpu,
+  sports: Dumbbell,
   sunglasses: Glasses,
-  tablets: Tablet,
-  tops: Shirt,
   vehicle: Car,
-  "womens-bags": ShoppingBag,
-  "womens-dresses": Shirt,
-  "womens-jewellery": Gem,
-  "womens-shoes": Footprints,
-  "womens-watches": Watch,
+  womens: ShoppingBag,
 };
 
 /**

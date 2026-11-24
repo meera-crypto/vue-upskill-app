@@ -83,7 +83,7 @@ const menuColumns = [
     id: "help-you",
     title: "Let Us Help You",
     links: [
-      { label: "Your Account", href: "#account" },
+      { label: "Your Account", to: { name: "account" } },
       { label: "Returns Centre", href: "#returns" },
       { label: "Recalls and Product Safety Alerts", href: "#safety" },
       { label: "100% Purchase Protection", href: "#protection" },
@@ -296,7 +296,14 @@ onUnmounted(() => {
               :key="link.label"
               class="footer-menu__item"
             >
-              <a :href="link.href" class="footer-menu__link">
+              <RouterLink
+                v-if="link.to"
+                :to="link.to"
+                class="footer-menu__link"
+              >
+                {{ link.label }}
+              </RouterLink>
+              <a v-else :href="link.href" class="footer-menu__link">
                 {{ link.label }}
               </a>
             </li>

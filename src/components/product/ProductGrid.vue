@@ -2,15 +2,13 @@
 /**
  * ProductGrid — toolbar, filters, and product grid.
  *
- * Layout:
- * - Desktop: sticky FilterSidebar on the left + chips + grid on the right
- * - Mobile: filter icon beside “Products” opens the same sidebar as a drawer
- * - Active filter chips sit above the product grid (aligned with the listing)
+ * Filter / cart / pagination actions come from `inject(LISTING_CONTEXT_KEY)`
+ * provided by ProductListingPage — no long prop/emit relay.
  *
- * Filter state lives in App (useProductFilters). This component receives
- * the filtered products + helpers via props and forwards user actions up.
+ * Display-only props (products slice, loading, error) still come from the
+ * parent so the page can control the skeleton pulse and mobile Load more.
  */
-import { ref, computed, onUnmounted, watch } from "vue";
+import { ref, computed, onUnmounted, watch, useTemplateRef, inject } from "vue";
 import { SlidersHorizontal } from "@lucide/vue";
 import ProductCard from "@/components/product/ProductCard.vue";
 import ProductSkeleton from "@/components/listing/ProductSkeleton.vue";
@@ -19,7 +17,10 @@ import FilterSidebar from "@/components/listing/FilterSidebar.vue";
 import ActiveFilterChips from "@/components/listing/ActiveFilterChips.vue";
 import ProductPagination from "@/components/listing/ProductPagination.vue";
 import SortDropdown from "@/components/listing/SortDropdown.vue";
-import { SORT_OPTIONS } from "@/composables/useProductFilters.js";
+import { SORT_OPTIONS } from "@/utils/productSort.js";
+import { SEARCH_MIN_LENGTH } from "@/composables/useProducts.js";
+import { useFocusTrap } from "@/composables/useFocusTrap.js";
+import { LISTING_CONTEXT_KEY } from "@/composables/listingContext.js";
 
 const props = defineProps({
   products: {
@@ -43,39 +44,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /** Catalog still loading — filter option lists show skeletons. */
+  filtersLoading: {
+    type: Boolean,
+    default: false,
+  },
   error: {
     type: String,
     default: null,
-  },
-  /** productId → quantity from App */
-  cart: {
-    type: Object,
-    default: () => ({}),
-  },
-  /** Array of favorited product ids from App */
-  favorites: {
-    type: Array,
-    default: () => [],
-  },
-  filters: {
-    type: Object,
-    required: true,
-  },
-  filterOptions: {
-    type: Object,
-    required: true,
-  },
-  priceBounds: {
-    type: Object,
-    required: true,
-  },
-  activeChips: {
-    type: Array,
-    default: () => [],
-  },
-  hasActiveFilters: {
-    type: Boolean,
-    default: false,
   },
   /** md+: numbered page controls. False on mobile (Load more instead). */
   showPagination: {
@@ -109,30 +85,20 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "retry",
-  "clear-search",
-  "add-to-cart",
-  "go-to-cart",
-  "toggle-favorite",
-  "see-all-options",
-  "toggle-brand",
-  "toggle-color",
-  "toggle-rating",
-  "toggle-discount",
-  "toggle-in-stock",
-  "update:sort",
-  "update:price-min",
-  "update:price-max",
-  "remove-chip",
-  "clear-filters",
-  "page-prev",
-  "page-next",
-  "go-to-page",
-  "load-more",
-]);
-/** Mobile filter drawer open/closed. */
+const listing = inject(LISTING_CONTEXT_KEY);
+if (!listing) {
+  throw new Error(
+    "ProductGrid requires LISTING_CONTEXT_KEY from ProductListingPage",
+  );
+}
+
 const filtersOpen = ref(false);
+const filterSidebarRef = useTemplateRef("filterSidebarRef");
+const filterDrawerEl = computed(() => {
+  const inst = filterSidebarRef.value;
+  const el = inst && "$el" in inst ? inst.$el : null;
+  return el instanceof HTMLElement ? el : null;
+});
 
 function openFilters() {
   filtersOpen.value = true;
@@ -142,7 +108,8 @@ function closeFilters() {
   filtersOpen.value = false;
 }
 
-/** Lock body scroll while the drawer is open. */
+useFocusTrap(filterDrawerEl, filtersOpen, { onEscape: closeFilters });
+
 watch(filtersOpen, (open) => {
   document.body.style.overflow = open ? "hidden" : "";
 });
@@ -152,17 +119,13 @@ onUnmounted(() => {
 });
 
 function isFavorite(productId) {
-  return props.favorites.includes(productId);
+  return listing.favorites.includes(productId);
 }
 
 function quantityFor(productId) {
-  return props.cart[productId] ?? 0;
+  return listing.cart[productId] ?? 0;
 }
 
-/**
- * Result range for the toolbar summary.
- * Parent passes the current page slice (md+) or cumulative Load more range (mobile).
- */
 const summaryRange = computed(() => ({
   start: props.range.start,
   end: props.range.end,
@@ -171,20 +134,30 @@ const showResultSummary = computed(
   () => !props.loading && !props.error && props.total > 0,
 );
 
-/** Empty-state copy depends on whether search and/or filters are active. */
 const emptyMessage = computed(() => {
   const query = props.searchQuery.trim();
-  if (query && props.hasActiveFilters) {
+  if (query && query.length < SEARCH_MIN_LENGTH) {
+    return `Type at least ${SEARCH_MIN_LENGTH} characters to search.`;
+  }
+  if (query && listing.hasActiveFilters) {
     return `No products match “${query}” with these filters.`;
   }
   if (query) return `No products match “${query}”.`;
-  if (props.hasActiveFilters) return "No products match these filters.";
+  if (listing.hasActiveFilters) return "No products match these filters.";
   return "No products found.";
 });
 
 const showEmptyFilterActions = computed(
-  () => Boolean(props.searchQuery.trim()) || props.hasActiveFilters,
+  () => Boolean(props.searchQuery.trim()) || listing.hasActiveFilters,
 );
+
+function onPriceMin(value) {
+  listing.setPriceRange(value, listing.filters.priceMax);
+}
+
+function onPriceMax(value) {
+  listing.setPriceRange(listing.filters.priceMin, value);
+}
 </script>
 
 <template>
@@ -194,29 +167,27 @@ const showEmptyFilterActions = computed(
     aria-labelledby="product-list-heading"
   >
     <div class="container">
-      <!--
-        Mobile: heading + sort share one row; result count wraps below.
-        Desktop (md+): count + Featured sort grouped top-right.
-      -->
       <div class="product-list__toolbar">
-        <div class="product-list__heading-row">
-          <button
-            type="button"
-            class="product-list__filters-toggle"
-            :aria-expanded="filtersOpen"
-            aria-controls="product-filters"
-            aria-label="Open filters"
-            @click="openFilters"
+        <button
+          type="button"
+          class="product-list__filters-toggle"
+          :aria-expanded="filtersOpen"
+          aria-controls="product-filters"
+          @click="openFilters"
+        >
+          <SlidersHorizontal :size="20" aria-hidden="true" />
+          <span class="product-list__filters-label">Filters</span>
+          <span
+            v-if="listing.hasActiveFilters"
+            class="product-list__filters-badge"
           >
-            <SlidersHorizontal :size="20" aria-hidden="true" />
-            <span v-if="hasActiveFilters" class="product-list__filters-badge">
-              {{ activeChips.length }}
-            </span>
-          </button>
-          <h2 id="product-list-heading" class="product-list__heading">
-            Products
-          </h2>
-        </div>
+            {{ listing.activeChips.length }}
+          </span>
+        </button>
+
+        <h2 id="product-list-heading" class="product-list__heading">
+          Products
+        </h2>
 
         <div class="product-list__toolbar-end">
           <p
@@ -234,9 +205,9 @@ const showEmptyFilterActions = computed(
 
           <SortDropdown
             class="product-list__sort"
-            :options="filterOptions.sorts ?? SORT_OPTIONS"
-            :model-value="filters.sort"
-            @update:model-value="emit('update:sort', $event)"
+            :options="listing.filterOptions.sorts ?? SORT_OPTIONS"
+            :model-value="listing.filters.sort"
+            @update:model-value="listing.setSort"
           />
         </div>
       </div>
@@ -250,32 +221,33 @@ const showEmptyFilterActions = computed(
           @click="closeFilters"
         />
 
-        <!--
-          Always mount FilterSidebar. Layout shift while the catalog loads is
-          limited with CSS min-heights (see filter-sidebar.css), not a skeleton.
-        -->
         <FilterSidebar
           id="product-filters"
-          :filters="filters"
-          :options="filterOptions"
-          :price-bounds="priceBounds"
+          ref="filterSidebarRef"
+          :filters="listing.filters"
+          :options="listing.filterOptions"
+          :price-bounds="listing.priceBounds"
+          :loading="filtersLoading"
           :drawer-open="filtersOpen"
-          @toggle-brand="emit('toggle-brand', $event)"
-          @toggle-color="emit('toggle-color', $event)"
-          @toggle-rating="emit('toggle-rating', $event)"
-          @toggle-discount="emit('toggle-discount', $event)"
-          @toggle-in-stock="emit('toggle-in-stock')"
-          @update:price-min="emit('update:price-min', $event)"
-          @update:price-max="emit('update:price-max', $event)"
-          @clear="emit('clear-filters')"
+          :aria-modal="filtersOpen ? 'true' : undefined"
+          :role="filtersOpen ? 'dialog' : undefined"
+          @toggle-brand="listing.toggleBrand"
+          @toggle-color="listing.toggleColor"
+          @toggle-size="listing.toggleSize"
+          @toggle-rating="listing.toggleRating"
+          @toggle-discount="listing.toggleDiscount"
+          @toggle-in-stock="listing.toggleInStock"
+          @update:price-min="onPriceMin"
+          @update:price-max="onPriceMax"
+          @clear="listing.clearFilters"
           @close="closeFilters"
         />
 
         <div class="product-list__main">
           <ActiveFilterChips
-            :chips="activeChips"
-            @remove="emit('remove-chip', $event)"
-            @clear="emit('clear-filters')"
+            :chips="listing.activeChips"
+            @remove="listing.removeChip"
+            @clear="listing.clearFilters"
           />
 
           <ProductSkeleton v-if="loading" :count="12" />
@@ -285,7 +257,7 @@ const showEmptyFilterActions = computed(
               <button
                 type="button"
                 class="btn btn--secondary"
-                @click="emit('retry')"
+                @click="listing.retry"
               >
                 Retry
               </button>
@@ -296,10 +268,10 @@ const showEmptyFilterActions = computed(
             <template #actions>
               <template v-if="showEmptyFilterActions">
                 <button
-                  v-if="hasActiveFilters"
+                  v-if="listing.hasActiveFilters"
                   type="button"
                   class="btn btn--secondary"
-                  @click="emit('clear-filters')"
+                  @click="listing.clearFilters"
                 >
                   Clear filters
                 </button>
@@ -307,7 +279,7 @@ const showEmptyFilterActions = computed(
                   v-if="searchQuery.trim()"
                   type="button"
                   class="btn btn--tertiary"
-                  @click="emit('clear-search')"
+                  @click="listing.clearSearch"
                 >
                   Clear search
                 </button>
@@ -316,7 +288,7 @@ const showEmptyFilterActions = computed(
                 v-else
                 type="button"
                 class="btn btn--secondary"
-                @click="emit('retry')"
+                @click="listing.retry"
               >
                 Try again
               </button>
@@ -334,12 +306,10 @@ const showEmptyFilterActions = computed(
                   :product="product"
                   :favorited="isFavorite(product.id)"
                   :quantity="quantityFor(product.id)"
-                  @add-to-cart="
-                    (product, variant) => emit('add-to-cart', product, variant)
-                  "
-                  @go-to-cart="emit('go-to-cart', $event)"
-                  @toggle-favorite="emit('toggle-favorite', $event)"
-                  @see-all-options="emit('see-all-options', $event)"
+                  @add-to-cart="listing.addToCart"
+                  @go-to-cart="listing.goToCart"
+                  @toggle-favorite="listing.toggleFavorite"
+                  @see-all-options="listing.seeAllOptions"
                 />
               </li>
             </ul>
@@ -351,16 +321,16 @@ const showEmptyFilterActions = computed(
               :page-items="pageItems"
               :can-prev="canPrev"
               :can-next="canNext"
-              @prev="emit('page-prev')"
-              @next="emit('page-next')"
-              @go-to-page="emit('go-to-page', $event)"
+              @prev="listing.prevPage"
+              @next="listing.nextPage"
+              @go-to-page="listing.goToPage"
             />
 
             <div v-if="showLoadMore" class="product-list__load-more">
               <button
                 type="button"
                 class="btn btn--tertiary product-list__load-more-btn"
-                @click="emit('load-more')"
+                @click="listing.loadMore"
               >
                 Load more
               </button>
@@ -371,3 +341,8 @@ const showEmptyFilterActions = computed(
     </div>
   </section>
 </template>
+
+<style>
+@import "@/assets/styles/components/product-list.css";
+@import "@/assets/styles/components/filter-sidebar.css";
+</style>

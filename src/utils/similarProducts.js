@@ -18,7 +18,11 @@
 function normalizeTags(value) {
   if (!Array.isArray(value)) return [];
   return value
-    .map((tag) => String(tag ?? "").trim().toLowerCase())
+    .map((tag) =>
+      String(tag ?? "")
+        .trim()
+        .toLowerCase(),
+    )
     .filter(Boolean);
 }
 
@@ -123,25 +127,27 @@ export function getSimilarProducts(source, catalog) {
 
 /**
  * Listing route for “View all” similar products.
- * Mirrors membership rules: category filter when we matched by category;
- * brand filter only as a no-category fallback.
+ * Mirrors membership rules: category path when we matched by category;
+ * brand query only as a no-category fallback.
  * @param {Record<string, unknown> | null | undefined} source
- * @returns {{ name: string, query: Record<string, string> } | null}
+ * @returns {{ name: string, params?: { category: string }, query: Record<string, string> } | null}
  */
 export function similarProductsListingTo(source) {
   if (!source) return null;
 
   const { category, brand } = sourceSignals(source);
 
-  /** @type {Record<string, string>} */
-  const query = {};
   if (category) {
-    query.category = category;
-  } else if (brand) {
-    query.brand = brand;
+    return {
+      name: "products-category",
+      params: { category },
+      query: {},
+    };
   }
 
-  if (Object.keys(query).length === 0) return null;
+  if (brand) {
+    return { name: "products", query: { brand } };
+  }
 
-  return { name: "products", query };
+  return null;
 }

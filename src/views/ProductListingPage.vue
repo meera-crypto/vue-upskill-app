@@ -1,17 +1,28 @@
 <script setup>
 /**
- * Product listing page — wires search → filters → pagination and syncs them to the URL.
+ * Listing view used for:
+ * - Home `/` — all products + home Hero
+ * - Category `/:category` — scoped products + CategoryBanner
  *
- * Discovery pipeline (requirements):
- *   useProducts (search) → useProductFilters → usePagination → ProductGrid
- *   useListingQuerySync keeps that state shareable via ?q=&brand=&page=…
+ * Discovery pipeline:
+ *   useProducts → useProductFilters → usePagination → ProductGrid
  *
- * Vue concepts: composables return reactive state; this view wires them together
- * and passes data down as props / listens for emits up.
+ * Vue idea: `provide(LISTING_CONTEXT_KEY)` shares filter/cart actions with
+ * ProductGrid so we avoid a long prop/emit relay.
  */
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  provide,
+  reactive,
+} from "vue";
+import { useRoute, useRouter } from "vue-router";
 import Hero from "@/components/layout/Hero.vue";
+import CategoryBanner from "@/components/layout/CategoryBanner.vue";
 import ProductGrid from "@/components/product/ProductGrid.vue";
 import RecentlyViewedProducts from "@/components/product/RecentlyViewedProducts.vue";
 import { useProducts } from "@/composables/useProducts.js";
@@ -21,15 +32,21 @@ import { useListingQuerySync } from "@/composables/useListingQuerySync.js";
 import { useToast } from "@/composables/useToast.js";
 import { useCart } from "@/composables/useCart.js";
 import { useWishlist } from "@/composables/useWishlist.js";
+import { LISTING_CONTEXT_KEY } from "@/composables/listingContext.js";
 import { mediaQueries } from "@/constants/breakpoints.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
+import { categoryFromRoute } from "@/utils/listingRoutes.js";
+
+const route = useRoute();
+
+const isHomePage = computed(() => route.name === "products");
+const activeCategory = computed(() => categoryFromRoute(route));
 
 const {
   catalog,
   products: searchedProducts,
   loading,
   error,
-  query,
   appliedQuery,
   hydrateQuery,
   clearSearch,
@@ -46,6 +63,7 @@ const {
   isPriceFiltered,
   toggleBrand,
   toggleColor,
+  toggleSize,
   toggleRating,
   toggleDiscount,
   toggleInStock,
@@ -79,21 +97,46 @@ useListingQuerySync({
   isPriceFiltered,
   page,
   goToPage,
+  total,
 });
 
-/**
- * Below md (<768px): show 12 products, then a Load more control (+12 each tap).
- * md+: numbered pagination (12 per page).
- *
- * Uses shared `mediaQueries.untilMd` so JS matches CSS breakpoints.
- * A `ref` + matchMedia so Vue can change *data*, not just CSS layout.
- *
- * Mobile visible count is separate from URL `page` so Load more does not
- * fight desktop page sync (page 2 on desktop = items 13–24; on mobile
- * Load more = cumulative 1–24).
- */
+const listRefreshing = ref(false);
+const discoveryWatchReady = ref(false);
+/** @type {ReturnType<typeof setTimeout> | null} */
+let listRefreshTimer = null;
+const LIST_REFRESH_MS = 280;
+
+function pulseListRefresh() {
+  if (loading.value) return;
+  listRefreshing.value = true;
+  if (listRefreshTimer) clearTimeout(listRefreshTimer);
+  listRefreshTimer = setTimeout(() => {
+    listRefreshing.value = false;
+    listRefreshTimer = null;
+  }, LIST_REFRESH_MS);
+}
+
+const showListSkeleton = computed(() => loading.value || listRefreshing.value);
+
+watch(
+  () => ({
+    categories: filters.categories.slice(),
+    brands: filters.brands.slice(),
+    colors: filters.colors.slice(),
+    sizes: filters.sizes.slice(),
+    ratings: filters.ratings.slice(),
+    discounts: filters.discounts.slice(),
+    inStockOnly: filters.inStockOnly,
+    sort: filters.sort,
+    q: appliedQuery.value,
+  }),
+  () => {
+    if (!discoveryWatchReady.value) return;
+    pulseListRefresh();
+  },
+);
+
 const isMobile = ref(false);
-/** How many products are revealed on mobile (grows by PAGE_SIZE). */
 const mobileVisibleCount = ref(PAGE_SIZE);
 /** @type {MediaQueryList | null} */
 let mobileMediaQuery = null;
@@ -102,17 +145,19 @@ function syncIsMobile() {
   isMobile.value = mobileMediaQuery?.matches ?? false;
 }
 
-onMounted(() => {
+onMounted(async () => {
   mobileMediaQuery = window.matchMedia(mediaQueries.untilMd);
   syncIsMobile();
   mobileMediaQuery.addEventListener("change", syncIsMobile);
+  await nextTick();
+  discoveryWatchReady.value = true;
 });
 
 onUnmounted(() => {
   mobileMediaQuery?.removeEventListener("change", syncIsMobile);
+  if (listRefreshTimer) clearTimeout(listRefreshTimer);
 });
 
-/** New search/filter result set → show the first batch again. */
 watch(
   () => {
     const list = filteredProducts.value;
@@ -133,7 +178,6 @@ const displayedProducts = computed(() => {
   return paginatedItems.value;
 });
 
-/** Toolbar “Showing X–Y of Z” — cumulative on mobile, page slice on md+. */
 const displayRange = computed(() => {
   if (!isMobile.value) return range.value;
   if (total.value === 0) return { start: 0, end: 0 };
@@ -155,7 +199,6 @@ function loadMore() {
   );
 }
 
-/** After a page change, bring the listing back into view (modern UX). */
 watch(page, async (nextPage, prevPage) => {
   if (isMobile.value) return;
   if (prevPage == null || nextPage === prevPage) return;
@@ -165,24 +208,16 @@ watch(page, async (nextPage, prevPage) => {
     block: "start",
   });
 });
-/**
- * Cart + favorites live in shared composables (module-scoped refs), so the
- * header badges and /cart + /favorites pages stay in sync with this listing.
- */
+
 const router = useRouter();
 const toast = useToast();
 const { cartQuantities, addToCart: putInCart } = useCart();
 const { favoriteIds, toggleFavorite: toggleFavoriteId } = useWishlist();
 
-/** Friendly label for toast copy (title with a safe fallback). */
 function productLabel(product) {
   return product?.title?.trim() || "Item";
 }
 
-/**
- * First add: quantity 1 when in stock. Qty +/- is on the cart page.
- * Optional `variant` comes from quick-view selection on the card.
- */
 function addToCart(product, variant = null) {
   if (putInCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
@@ -195,7 +230,6 @@ function goToCart() {
   router.push({ name: "cart" });
 }
 
-/** Out-of-stock “See All Options” → product details (`/product?id=&slug=`). */
 function seeAllOptions(product) {
   if (!product?.id) return;
   router.push(productDetailsTo(product));
@@ -210,33 +244,56 @@ function toggleFavorite(product) {
   }
 }
 
-function onPriceMin(value) {
-  setPriceRange(value, filters.priceMax);
-}
-
-function onPriceMax(value) {
-  setPriceRange(filters.priceMin, value);
-}
+/**
+ * Reactive bag so nested refs unwrap in ProductGrid templates/script.
+ * Display slice (products, page, loading) stays as props.
+ */
+provide(
+  LISTING_CONTEXT_KEY,
+  reactive({
+    filters,
+    filterOptions,
+    priceBounds,
+    activeChips,
+    hasActiveFilters,
+    cart: cartQuantities,
+    favorites: favoriteIds,
+    toggleBrand,
+    toggleColor,
+    toggleSize,
+    toggleRating,
+    toggleDiscount,
+    toggleInStock,
+    setSort,
+    setPriceRange,
+    removeChip,
+    clearFilters,
+    clearSearch,
+    retry,
+    addToCart,
+    goToCart,
+    toggleFavorite,
+    seeAllOptions,
+    prevPage: prev,
+    nextPage: next,
+    goToPage,
+    loadMore,
+  }),
+);
 </script>
 
 <template>
-  <!-- Header / <main> are in App.vue — shared across routes. -->
-  <Hero />
+  <Hero v-if="isHomePage" />
+  <CategoryBanner v-else-if="activeCategory" :category="activeCategory" />
 
   <ProductGrid
     :products="displayedProducts"
     :total="total"
     :range="displayRange"
-    :search-query="query"
-    :loading="loading"
+    :search-query="appliedQuery"
+    :loading="showListSkeleton"
+    :filters-loading="loading"
     :error="error"
-    :cart="cartQuantities"
-    :favorites="favoriteIds"
-    :filters="filters"
-    :filter-options="filterOptions"
-    :price-bounds="priceBounds"
-    :active-chips="activeChips"
-    :has-active-filters="hasActiveFilters"
     :show-pagination="showPagination"
     :show-load-more="showLoadMore"
     :page="page"
@@ -244,30 +301,14 @@ function onPriceMax(value) {
     :page-items="pageItems"
     :can-prev="canPrev"
     :can-next="canNext"
-    @retry="retry"
-    @clear-search="clearSearch"
-    @add-to-cart="addToCart"
-    @go-to-cart="goToCart"
-    @toggle-favorite="toggleFavorite"
-    @see-all-options="seeAllOptions"
-    @toggle-brand="toggleBrand"
-    @toggle-color="toggleColor"
-    @toggle-rating="toggleRating"
-    @toggle-discount="toggleDiscount"
-    @toggle-in-stock="toggleInStock"
-    @update:sort="setSort"
-    @update:price-min="onPriceMin"
-    @update:price-max="onPriceMax"
-    @remove-chip="removeChip"
-    @clear-filters="clearFilters"
-    @page-prev="prev"
-    @page-next="next"
-    @go-to-page="goToPage"
-    @load-more="loadMore"
   />
 
-  <!-- Optional: products opened on the details page (localStorage). -->
   <div class="container">
     <RecentlyViewedProducts />
   </div>
 </template>
+
+<style>
+@import "@/assets/styles/components/hero.css";
+@import "@/assets/styles/components/category-banner.css";
+</style>

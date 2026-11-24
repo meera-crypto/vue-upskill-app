@@ -86,11 +86,7 @@ function onSeeAllOptions(product) {
     :watch-key="products.length"
     :section-class="sectionClass"
   >
-    <li
-      v-for="item in products"
-      :key="item.id"
-      class="product-carousel__item"
-    >
+    <li v-for="item in products" :key="item.id" class="product-carousel__item">
       <ProductCard
         :product="item"
         :favorited="isFavorite(item.id)"

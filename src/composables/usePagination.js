@@ -89,7 +89,14 @@ export function usePagination(sourceItems, options = {}) {
   function goToPage(nextPage) {
     const n = Number(nextPage);
     if (!Number.isFinite(n)) return;
-    page.value = Math.min(Math.max(Math.trunc(n), 1), totalPages.value);
+    const target = Math.max(Math.trunc(n), 1);
+    // Catalog still empty (hard refresh): keep the bookmark page so state→URL
+    // does not strip `?page=` before products arrive. Clamp once we have items.
+    if (total.value === 0) {
+      page.value = target;
+      return;
+    }
+    page.value = Math.min(target, totalPages.value);
   }
 
   function next() {
@@ -103,7 +110,11 @@ export function usePagination(sourceItems, options = {}) {
   /**
    * New result set (search or filter change) → back to page 1.
    * Compare a cheap fingerprint so we only reset when the list identity
-   * actually changes, then clamp if the page is past the end.
+   * actually changes.
+   *
+   * Skip empty → loaded (fingerprint `"0"` → real list): that is catalog
+   * hydrate on hard refresh, not a user filter change. Resetting here was
+   * wiping `?page=2` after goToPage had already been clamped or restored.
    */
   watch(
     () => {
@@ -113,7 +124,13 @@ export function usePagination(sourceItems, options = {}) {
       const last = list[list.length - 1]?.id ?? "";
       return `${list.length}:${first}:${last}`;
     },
-    () => {
+    (next, prev) => {
+      if (next === "0") {
+        page.value = 1;
+        return;
+      }
+      // Initial hydrate / retry after empty — keep URL-restored page.
+      if (prev === "0" || prev === undefined) return;
       page.value = 1;
     },
   );

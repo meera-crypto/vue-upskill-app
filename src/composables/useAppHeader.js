@@ -4,21 +4,33 @@
  * Vue idea: Header lives once in App.vue (stays mounted across navigations).
  * This composable supplies search + category props:
  * - Search uses the shared useProducts() query (same box everywhere).
- * - On the listing route, category toggles update the URL; useListingQuerySync
- *   applies them to filters.
- * - On cart / favorites, search or category navigates home with ?q= / ?category=.
+ * - On the listing route, category toggles update `/:category`
+ *   (useListingQuerySync keeps other filters in the query string).
+ * - On cart / favorites, search or category navigates to the listing path.
  * - Search and category combine with AND (chip kept). No overlap → empty state
  *   on the listing; the user clears search/category or picks another chip.
  */
 import { computed, watch, ref, onMounted, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProducts } from "@/composables/useProducts.js";
-import { formatCategoryLabel } from "@/services/productService.js";
+import { formatCategoryLabel } from "@/utils/productModel.js";
+import {
+  categoryFromRoute,
+  isListingRouteName,
+  listingTo,
+} from "@/utils/listingRoutes.js";
 
 export function useAppHeader() {
   const route = useRoute();
   const router = useRouter();
-  const { catalog, query, appliedQuery, setQuery, clearSearch } = useProducts();
+  const {
+    catalog,
+    query,
+    appliedQuery,
+    setQuery,
+    applySearch,
+    clearSearch,
+  } = useProducts();
 
   /**
    * Skip the first appliedQuery watch so the initial App mount doesn’t
@@ -31,7 +43,7 @@ export function useAppHeader() {
     ready.value = true;
   });
 
-  const isListing = computed(() => route.name === "products");
+  const isListing = computed(() => isListingRouteName(route.name));
 
   const categories = computed(() => {
     const map = new Map();
@@ -44,27 +56,31 @@ export function useAppHeader() {
     }
     return [...map.entries()]
       .map(([value, label]) => ({ value, label }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      // A–Z by display label (Beauty, Furniture, Gadgets, …).
+      .sort((a, b) =>
+        a.label.localeCompare(b.label, undefined, { sensitivity: "base" }),
+      );
   });
 
-  /** Listing selection comes from the URL; other pages show none selected. */
+  /** Listing selection comes from the URL path; other pages show none selected. */
   const selectedCategories = computed(() => {
     if (!isListing.value) return [];
-    const raw = route.query.category;
-    if (raw == null || raw === "") return [];
-    const value = Array.isArray(raw) ? raw[0] : String(raw);
+    const value = categoryFromRoute(route);
     return value ? [value] : [];
   });
 
-  function goToListing(queryParams = {}) {
-    router.push({ name: "products", query: queryParams });
+  /**
+   * @param {{ category?: string, query?: Record<string, string> }} [options]
+   */
+  function goToListing(options = {}) {
+    router.push(listingTo(options));
   }
 
-  /** From cart/favorites: after debounce, open listing with the search. */
+  /** From cart/favorites: after Enter applies search, open the listing. */
   watch(appliedQuery, (value) => {
     if (!ready.value || isListing.value) return;
     const trimmed = String(value ?? "").trim();
-    goToListing(trimmed ? { q: trimmed } : {});
+    goToListing(trimmed ? { query: { q: trimmed } } : {});
   });
 
   function onClearSearch() {
@@ -77,13 +93,16 @@ export function useAppHeader() {
   }
 
   /**
-   * Pass typing through to the shared search box. Category stays selected;
-   * listing filters apply search AND category (empty state when no overlap).
-   *
+   * Typing updates the input only. Listing results wait for Enter / submit.
    * @param {string} next
    */
   function setQueryFromHeader(next) {
     setQuery(next);
+  }
+
+  /** Enter / View all — commit `query` → `appliedQuery` (listing + URL). */
+  function applySearchFromHeader() {
+    applySearch();
   }
 
   /**
@@ -102,22 +121,26 @@ export function useAppHeader() {
         ? selectedCategories.value[0]
         : null;
 
-    /** @type {Record<string, string | string[]>} */
-    const nextQuery = { ...route.query };
-    delete nextQuery.page;
-
-    if (current === value) {
-      delete nextQuery.category;
-    } else {
-      nextQuery.category = value;
+    /** @type {Record<string, string>} */
+    const nextQuery = {};
+    for (const [key, raw] of Object.entries(route.query)) {
+      if (key === "category" || key === "page") continue;
+      if (raw == null || raw === "") continue;
+      nextQuery[key] = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw);
     }
 
-    router.replace({ query: nextQuery });
+    if (current === value) {
+      goToListing({ query: nextQuery });
+      return;
+    }
+
+    router.replace(listingTo({ category: value, query: nextQuery }));
   }
 
   return {
     searchQuery: query,
     setQuery: setQueryFromHeader,
+    applySearch: applySearchFromHeader,
     clearSearch: onClearSearch,
     categories,
     selectedCategories,

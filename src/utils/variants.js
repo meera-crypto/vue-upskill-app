@@ -73,7 +73,9 @@ export function resolveVariantForAdd(product, variant = null) {
   const variants = /** @type {Record<string, unknown>[]} */ (product.variants);
 
   if (variant?.id != null) {
-    const match = variants.find((entry) => String(entry.id) === String(variant.id));
+    const match = variants.find(
+      (entry) => String(entry.id) === String(variant.id),
+    );
     return match ?? null;
   }
 

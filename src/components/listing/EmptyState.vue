@@ -12,11 +12,15 @@ defineProps({
     type: String,
     default: "",
   },
-  /** `default` = status; `error` = alert styling + role. */
+  /**
+   * `default` = status (no matches);
+   * `error` = alert (API failure);
+   * `not-found` = status for missing pages / products.
+   */
   variant: {
     type: String,
     default: "default",
-    validator: (value) => ["default", "error"].includes(value),
+    validator: (value) => ["default", "error", "not-found"].includes(value),
   },
 });
 </script>
@@ -24,7 +28,10 @@ defineProps({
 <template>
   <div
     class="empty-state"
-    :class="{ 'empty-state--error': variant === 'error' }"
+    :class="{
+      'empty-state--error': variant === 'error',
+      'empty-state--not-found': variant === 'not-found',
+    }"
     :role="variant === 'error' ? 'alert' : 'status'"
     :aria-live="variant === 'error' ? undefined : 'polite'"
   >

@@ -2,8 +2,9 @@
 /**
  * Favorites page — products saved via the heart on product cards.
  *
- * Reuses ProductCard so Add to cart / unfavorite behave the same as on the
- * listing. State comes from shared useWishlist + useCart.
+ * Reuses ProductCard so Add to cart matches the listing.
+ * Cards use `favoriteAsClose` so remove is a × close control (not a heart).
+ * State comes from shared useWishlist + useCart.
  */
 import { computed } from "vue";
 import { useRouter } from "vue-router";
@@ -98,6 +99,7 @@ function continueShopping() {
             <ProductCard
               :product="product"
               :favorited="favoriteIds.includes(product.id)"
+              favorite-as-close
               :quantity="cartQuantities[product.id] ?? 0"
               @add-to-cart="onAddToCart"
               @go-to-cart="onGoToCart"
@@ -120,3 +122,7 @@ function continueShopping() {
     </div>
   </div>
 </template>
+
+<style>
+@import "@/assets/styles/components/favorites-page.css";
+</style>

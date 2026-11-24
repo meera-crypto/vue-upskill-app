@@ -13,6 +13,10 @@
   color: var(--color-secondary);
 }
 
+.empty-state--not-found {
+  color: var(--color-text-muted);
+}
+
 .empty-state__message {
   margin: 0;
   max-width: 36rem;

@@ -5,42 +5,35 @@
  * - OR within the same group (Brand A OR Brand B)
  * - AND across groups (brand AND price AND rating …)
  *
+ * Pure option/chip builders live in `@/utils/filterOptions.js`;
+ * sort options + sortProducts live in `@/utils/productSort.js`.
+ *
  * Vue ideas:
  * - `reactive` — one object for all filter selections (nice for forms)
  * - `computed` — filtered list + option lists + active chips stay in sync
  * - `toRef` / `unref` — accept a ref or plain array of source products
  */
 import { reactive, computed, unref, watch } from "vue";
-import { COLOR_SWATCH_HEX } from "@/services/productService.js";
+import {
+  RATING_FILTER_OPTIONS,
+  DISCOUNT_FILTER_OPTIONS,
+  buildFilterOptions,
+  buildActiveChips,
+} from "@/utils/filterOptions.js";
+import {
+  SORT_OPTIONS,
+  DEFAULT_SORT,
+  sortProducts,
+} from "@/utils/productSort.js";
 
-export const RATING_FILTER_OPTIONS = [
-  { value: 4, label: "4 ★ & above" },
-  { value: 3, label: "3 ★ & above" },
-  { value: 2, label: "2 ★ & above" },
-  { value: 1, label: "1 ★ & above" },
-];
-
-export const DISCOUNT_FILTER_OPTIONS = [
-  { value: 5, label: "5% or more" },
-  { value: 10, label: "10% or more" },
-  { value: 15, label: "15% or more" },
-];
-
-/**
- * Toolbar sort options (Search → Filter → Sort → Paginate).
- * Default is Featured — see docs/product-listing-requirements.md §3.4.
- */
-export const SORT_OPTIONS = [
-  { value: "featured", label: "Featured Products" },
-  { value: "best-selling", label: "Best Seller" },
-  { value: "newest", label: "Newest Arrival" },
-  { value: "rating", label: "Customer Rating" },
-  { value: "discount-desc", label: "Biggest Discount" },
-  { value: "price-asc", label: "Price: Low to High" },
-  { value: "price-desc", label: "Price: High to Low" },
-];
-
-export const DEFAULT_SORT = "featured";
+/* Re-export so older imports (e.g. ProductGrid) keep working.
+ * Prefer importing from productSort / filterOptions in new code. */
+export {
+  SORT_OPTIONS,
+  DEFAULT_SORT,
+  RATING_FILTER_OPTIONS,
+  DISCOUNT_FILTER_OPTIONS,
+};
 
 /** sessionStorage key — last catalog price bounds (reduces slider jump on refresh). */
 const PRICE_BOUNDS_STORAGE_KEY = "vue-shop-price-bounds";
@@ -75,91 +68,6 @@ function writeStoredPriceBounds(bounds) {
   }
 }
 
-/**
- * @param {unknown} a
- * @param {unknown} b
- * @returns {number}
- */
-function compareNumbersDesc(a, b) {
-  return (Number(b) || 0) - (Number(a) || 0);
-}
-
-/**
- * Apply the selected sort. Always returns a new array.
- * @param {unknown[]} list
- * @param {string} sort
- */
-function sortProducts(list, sort) {
-  const sorted = [...list];
-
-  switch (sort) {
-    case "price-asc":
-      sorted.sort((a, b) => (Number(a?.price) || 0) - (Number(b?.price) || 0));
-      break;
-    case "price-desc":
-      sorted.sort((a, b) => (Number(b?.price) || 0) - (Number(a?.price) || 0));
-      break;
-    case "newest":
-      sorted.sort((a, b) => {
-        const timeA = a?.createdAt ? Date.parse(a.createdAt) : NaN;
-        const timeB = b?.createdAt ? Date.parse(b.createdAt) : NaN;
-        const hasA = Number.isFinite(timeA);
-        const hasB = Number.isFinite(timeB);
-        if (hasA && hasB && timeA !== timeB) return timeB - timeA;
-        if (hasA !== hasB) return hasA ? -1 : 1;
-        // Fallback: higher DummyJSON id ≈ newer catalog entry.
-        return (Number(b?.id) || 0) - (Number(a?.id) || 0);
-      });
-      break;
-    case "best-selling":
-      // Highest salesCount first; id keeps ties stable.
-      sorted.sort((a, b) => {
-        const bySales = compareNumbersDesc(a?.salesCount, b?.salesCount);
-        if (bySales !== 0) return bySales;
-        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
-      });
-      break;
-    case "rating":
-      // Highest rating first; products with no rating sink to the end.
-      sorted.sort((a, b) => {
-        const hasA = typeof a?.rating === "number";
-        const hasB = typeof b?.rating === "number";
-        if (hasA !== hasB) return hasA ? -1 : 1;
-        if (hasA && hasB) {
-          const byRating = compareNumbersDesc(a.rating, b.rating);
-          if (byRating !== 0) return byRating;
-        }
-        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
-      });
-      break;
-    case "discount-desc":
-      // Biggest discount % first (not raw dollar savings).
-      sorted.sort((a, b) => {
-        const byDiscount = compareNumbersDesc(
-          a?.discountPercentage,
-          b?.discountPercentage,
-        );
-        if (byDiscount !== 0) return byDiscount;
-        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
-      });
-      break;
-    case "featured":
-    default:
-      // Featured first, then higher rating, then id for a stable order.
-      sorted.sort((a, b) => {
-        const featA = a?.isFeatured ? 1 : 0;
-        const featB = b?.isFeatured ? 1 : 0;
-        if (featA !== featB) return featB - featA;
-        const byRating = compareNumbersDesc(a?.rating, b?.rating);
-        if (byRating !== 0) return byRating;
-        return (Number(a?.id) || 0) - (Number(b?.id) || 0);
-      });
-      break;
-  }
-
-  return sorted;
-}
-
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
@@ -183,6 +91,8 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     brands: [],
     /** @type {string[]} color names */
     colors: [],
+    /** @type {string[]} size option values (only products that have Size) */
+    sizes: [],
     /** @type {number[]} minimum rating thresholds (e.g. 4 = 4★ & up) */
     ratings: [],
     /** @type {number[]} minimum discount % thresholds */
@@ -255,60 +165,16 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     { immediate: true },
   );
 
-  const filterOptions = computed(() => {
-    const categoriesMap = new Map();
-    const brands = new Set();
-    const colors = new Set();
-    // Brand list depends on category: selected category → brands in that
-    // category only; no category → every brand in the catalog.
-    const selectedCategories = filters.categories;
-    const brandProducts =
-      selectedCategories.length > 0
-        ? catalogList.value.filter((product) =>
-            selectedCategories.includes(product?.category),
-          )
-        : catalogList.value;
-
-    for (const product of catalogList.value) {
-      if (product?.category) {
-        categoriesMap.set(
-          product.category,
-          product.categoryLabel || product.category,
-        );
-      }
-      for (const color of product?.colors ?? []) {
-        colors.add(color);
-      }
-    }
-
-    for (const product of brandProducts) {
-      if (product?.brand) brands.add(product.brand);
-    }
-
-    return {
-      categories: [...categoriesMap.entries()]
-        .map(([value, label]) => ({ value, label }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-      brands: [...brands].sort((a, b) => a.localeCompare(b)),
-      colors: [...colors]
-        .sort((a, b) => a.localeCompare(b))
-        .map((name) => ({
-          value: name,
-          label: name.charAt(0).toUpperCase() + name.slice(1),
-          hex: COLOR_SWATCH_HEX[name] ?? "#ccc",
-        })),
-      ratings: RATING_FILTER_OPTIONS,
-      discounts: DISCOUNT_FILTER_OPTIONS,
-      sorts: SORT_OPTIONS,
-    };
-  });
+  const filterOptions = computed(() =>
+    buildFilterOptions(catalogList.value, filters.categories),
+  );
 
   /**
-   * When the category changes, drop brand selections that are no longer
-   * in the brand checkbox list (avoids invisible chips / empty results).
+   * When the category changes, drop brand / size selections that are no
+   * longer in the option list (avoids invisible chips / empty results).
    *
-   * Wait until the catalog has loaded. On refresh, URL sync restores brands
-   * first; if we prune against an empty option list, every brand is wiped
+   * Wait until the catalog has loaded. On refresh, URL sync restores values
+   * first; if we prune against an empty option list, every value is wiped
    * and then written back out of the URL.
    */
   watch(
@@ -318,6 +184,16 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       if (catalogList.value.length === 0) return;
       const allowed = new Set(availableBrands);
       filters.brands = filters.brands.filter((brand) => allowed.has(brand));
+    },
+  );
+
+  watch(
+    () => filterOptions.value.sizes,
+    (availableSizes) => {
+      if (filters.sizes.length === 0) return;
+      if (catalogList.value.length === 0) return;
+      const allowed = new Set(availableSizes);
+      filters.sizes = filters.sizes.filter((size) => allowed.has(size));
     },
   );
 
@@ -331,6 +207,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
       filters.categories.length > 0 ||
       filters.brands.length > 0 ||
       filters.colors.length > 0 ||
+      filters.sizes.length > 0 ||
       filters.ratings.length > 0 ||
       filters.discounts.length > 0 ||
       filters.inStockOnly ||
@@ -358,6 +235,12 @@ export function useProductFilters(sourceProducts, catalogProducts) {
           productColors.includes(c),
         );
         if (!matchesColor) return false;
+      }
+
+      if (filters.sizes.length > 0) {
+        const productSizes = product.sizes ?? [];
+        const matchesSize = filters.sizes.some((s) => productSizes.includes(s));
+        if (!matchesSize) return false;
       }
 
       if (filters.ratings.length > 0) {
@@ -394,79 +277,16 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     return sortProducts(matched, filters.sort);
   });
 
-  const activeChips = computed(() => {
-    /** @type {{ id: string, group: string, value: string|number, label: string }[]} */
-    const chips = [];
-
-    for (const value of filters.categories) {
-      const opt = filterOptions.value.categories.find((c) => c.value === value);
-      chips.push({
-        id: `category:${value}`,
-        group: "categories",
-        value,
-        label: opt?.label ?? value,
-      });
-    }
-
-    for (const value of filters.brands) {
-      chips.push({
-        id: `brand:${value}`,
-        group: "brands",
-        value,
-        label: value,
-      });
-    }
-
-    for (const value of filters.colors) {
-      const opt = filterOptions.value.colors.find((c) => c.value === value);
-      chips.push({
-        id: `color:${value}`,
-        group: "colors",
-        value,
-        label: opt?.label ?? value,
-      });
-    }
-
-    for (const value of filters.ratings) {
-      const opt = RATING_FILTER_OPTIONS.find((r) => r.value === value);
-      chips.push({
-        id: `rating:${value}`,
-        group: "ratings",
-        value,
-        label: opt?.label ?? `${value}★ & up`,
-      });
-    }
-
-    for (const value of filters.discounts) {
-      const opt = DISCOUNT_FILTER_OPTIONS.find((d) => d.value === value);
-      chips.push({
-        id: `discount:${value}`,
-        group: "discounts",
-        value,
-        label: opt?.label ?? `${value}% or more`,
-      });
-    }
-
-    if (filters.inStockOnly) {
-      chips.push({
-        id: "inStock",
-        group: "inStock",
-        value: "inStock",
-        label: "In stock",
-      });
-    }
-
-    if (isPriceFiltered.value) {
-      chips.push({
-        id: "price",
-        group: "price",
-        value: "price",
-        label: `${priceFormatter.format(filters.priceMin)} – ${priceFormatter.format(filters.priceMax)}`,
-      });
-    }
-
-    return chips;
-  });
+  const activeChips = computed(() =>
+    buildActiveChips({
+      filters,
+      filterOptions: filterOptions.value,
+      isPriceFiltered: isPriceFiltered.value,
+      priceMin: filters.priceMin,
+      priceMax: filters.priceMax,
+      priceFormatter,
+    }),
+  );
 
   function toggleArrayValue(list, value) {
     const index = list.indexOf(value);
@@ -495,6 +315,10 @@ export function useProductFilters(sourceProducts, catalogProducts) {
 
   function toggleColor(value) {
     toggleArrayValue(filters.colors, value);
+  }
+
+  function toggleSize(value) {
+    toggleArrayValue(filters.sizes, value);
   }
 
   function toggleRating(value) {
@@ -558,6 +382,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     filters.categories = [];
     filters.brands = [];
     filters.colors = [];
+    filters.sizes = [];
     filters.ratings = [];
     filters.discounts = [];
     filters.inStockOnly = false;
@@ -577,6 +402,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     toggleCategory,
     toggleBrand,
     toggleColor,
+    toggleSize,
     toggleRating,
     toggleDiscount,
     toggleInStock,

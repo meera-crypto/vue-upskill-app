@@ -9,16 +9,22 @@
  * Catalog, search query, loading, and error live at module scope (like useCart):
  * App Header and every page share one fetch and one search box.
  *
+ * Search UX:
+ * - `query` updates as the user types (input only).
+ * - `appliedQuery` updates on Enter / clear / URL hydrate (listing results).
+ * - At least `SEARCH_MIN_LENGTH` characters are required to match products;
+ *   shorter submitted queries yield an empty result set + empty-state copy.
+ *
  * Vue ideas used here:
  * - `ref` — single reactive values (catalog, loading, query)
- * - `computed` — derived list that updates when catalog or query changes
- * - debounce — wait ~300 ms after typing before applying search
+ * - `computed` — derived list that updates when catalog or appliedQuery changes
  */
 import { ref, computed, onMounted } from "vue";
-import {
-  fetchCatalog,
-  productMatchesSearch,
-} from "@/services/productService.js";
+import { fetchCatalog } from "@/services/productService.js";
+import { productMatchesSearch } from "@/utils/productSearch.js";
+
+/** Minimum characters before a submitted search can match products. */
+export const SEARCH_MIN_LENGTH = 3;
 
 /** Shared across all useProducts() callers. */
 const catalog = ref([]);
@@ -27,15 +33,13 @@ const error = ref(null);
 
 /** Bound to the header input (updates on every keystroke). */
 const query = ref("");
-/** Query actually used for filtering (updates after debounce). */
+/** Query used for listing results (Enter / clear / URL hydrate). */
 const appliedQuery = ref("");
 
 /** @type {AbortController | null} */
 let controller = null;
 /** @type {Promise<void> | null} */
 let loadPromise = null;
-/** @type {ReturnType<typeof setTimeout> | null} */
-let debounceTimer = null;
 
 async function load() {
   if (loadPromise) return loadPromise;
@@ -73,11 +77,13 @@ async function load() {
  * computed() recalculates whenever catalog or appliedQuery changes.
  */
 const products = computed(() => {
-  const trimmed = appliedQuery.value.trim().toLowerCase();
+  const trimmed = appliedQuery.value.trim();
   if (!trimmed) return catalog.value;
+  if (trimmed.length < SEARCH_MIN_LENGTH) return [];
 
+  const needle = trimmed.toLowerCase();
   return catalog.value.filter((product) =>
-    productMatchesSearch(product, trimmed),
+    productMatchesSearch(product, needle),
   );
 });
 
@@ -87,62 +93,45 @@ function retry() {
 }
 
 /**
- * Update the input immediately; wait `debounceMs` before filtering.
+ * Update the input only — does not change listing results until applySearch().
  * @param {string} next
- * @param {number} [debounceMs]
  */
-function setQuery(next, debounceMs = 300) {
-  query.value = next;
-
-  if (debounceTimer != null) {
-    clearTimeout(debounceTimer);
-  }
-
-  debounceTimer = setTimeout(() => {
-    debounceTimer = null;
-    appliedQuery.value = query.value;
-  }, debounceMs);
+function setQuery(next) {
+  query.value = String(next ?? "");
 }
 
 /**
- * Apply a search string immediately (no debounce).
- * Used when restoring state from the URL so refresh/back match right away.
- * @param {string} next
+ * Commit the search to the listing (Enter / View all).
+ * @param {string} [next] — defaults to the current input value
  */
-function hydrateQuery(next) {
-  if (debounceTimer != null) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
+function applySearch(next = query.value) {
   const value = String(next ?? "");
   query.value = value;
   appliedQuery.value = value;
 }
 
-/** Clear search and show the catalog without waiting for debounce. */
+/**
+ * Apply a search string immediately (no typing delay).
+ * Used when restoring state from the URL so refresh/back match right away.
+ * @param {string} next
+ */
+function hydrateQuery(next) {
+  const value = String(next ?? "");
+  query.value = value;
+  appliedQuery.value = value;
+}
+
+/** Clear search and show the catalog. */
 function clearSearch() {
-  if (debounceTimer != null) {
-    clearTimeout(debounceTimer);
-    debounceTimer = null;
-  }
   query.value = "";
   appliedQuery.value = "";
 }
 
 /**
- * @param {{ immediate?: boolean, debounceMs?: number }} [options]
+ * @param {{ immediate?: boolean }} [options]
  */
 export function useProducts(options = {}) {
-  const { immediate = true, debounceMs = 300 } = options;
-
-  /**
-   * Wrap setQuery so this caller’s debounceMs is used (App + listing both
-   * default to 300).
-   * @param {string} next
-   */
-  function setQueryWithOptions(next) {
-    setQuery(next, debounceMs);
-  }
+  const { immediate = true } = options;
 
   if (immediate) {
     onMounted(() => {
@@ -158,9 +147,10 @@ export function useProducts(options = {}) {
     loading,
     error,
     query,
-    /** Debounced value actually used for filtering (also written to the URL). */
+    /** Submitted value used for filtering (also written to the URL). */
     appliedQuery,
-    setQuery: setQueryWithOptions,
+    setQuery,
+    applySearch,
     hydrateQuery,
     clearSearch,
     load,

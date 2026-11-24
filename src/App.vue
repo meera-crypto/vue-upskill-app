@@ -16,6 +16,7 @@ import { useAppHeader } from "@/composables/useAppHeader.js";
 const {
   searchQuery,
   setQuery,
+  applySearch,
   clearSearch,
   categories,
   selectedCategories,
@@ -34,6 +35,7 @@ const {
     :categories="categories"
     :selected-categories="selectedCategories"
     @update:search-query="setQuery"
+    @submit-search="applySearch"
     @clear-search="clearSearch"
     @toggle-category="toggleCategory"
   />

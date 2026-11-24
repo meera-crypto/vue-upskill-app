@@ -2,9 +2,17 @@
 /**
  * Header search field + product suggestions dropdown.
  *
- * Props/emits (v-model pattern):
- * - Parent passes `searchQuery` and listens for `update:searchQuery` on typing.
- * - Parent handles `clear-search` when the user clears the field (often resets URL/filters).
+ * Mobile (&lt; md): CSS shows a Search icon beside the logo; tap adds
+ * `.header-search--expanded` for the field. Tablet+: CSS always shows the field.
+ * Visibility is CSS-first so the header doesn’t jump after matchMedia mounts.
+ *
+ * Props/emits:
+ * - `update:searchQuery` — typing (input only; listing does not filter yet).
+ * - `submit-search` — Enter / View all → parent applies search to the listing.
+ * - `clear-search` — clear input + listing query.
+ *
+ * Suggestions appear after `SEARCH_MIN_LENGTH` characters. Listing results
+ * update only when the parent handles `submit-search` (Enter).
  */
 import {
   computed,
@@ -20,7 +28,9 @@ import {
   highlightSearchText,
   useSearchSuggestions,
 } from "@/composables/useSearchSuggestions.js";
-import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
+import { SEARCH_MIN_LENGTH } from "@/composables/useProducts.js";
+import { mediaQueries } from "@/constants/breakpoints.js";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
 
 const props = defineProps({
@@ -29,30 +39,68 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  /**
+   * Selected category slug (listing chip). Suggestions AND with this —
+   * same rule as listing results. Empty = search the full catalog.
+   */
+  selectedCategory: {
+    type: String,
+    default: "",
+  },
 });
 
-const emit = defineEmits(["update:searchQuery", "clear-search"]);
+const emit = defineEmits([
+  "update:searchQuery",
+  "submit-search",
+  "clear-search",
+]);
 
 const router = useRouter();
+const searchRootEl = useTemplateRef("searchRootEl");
 const searchFieldEl = useTemplateRef("searchFieldEl");
+const searchInputEl = useTemplateRef("searchInputEl");
 /** Scrollable product list inside the suggestions panel (View all sits outside it). */
 const suggestionsListEl = useTemplateRef("suggestionsListEl");
 
 /** Suggestions panel open while the search input is focused / in use. */
 const searchFocused = ref(false);
 const activeSuggestion = ref(-1);
+/**
+ * Mobile expand state only. Icon vs field visibility is CSS-driven
+ * (`untilMd` / `mdUp`) so first paint matches layout — no mount jump.
+ * `matchMedia` is still used for outside-click / Escape close behavior.
+ */
+const isMobileLayout = ref(
+  typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia(mediaQueries.untilMd).matches
+    : false,
+);
+const mobileSearchOpen = ref(false);
 /** Ignore the next blur close when clicking inside the dropdown. */
 let blurCloseTimer = null;
+/** @type {MediaQueryList | null} */
+let untilMdMql = null;
 
 const searchQueryRef = computed(() => props.searchQuery);
-const { suggestions, hasSuggestions } = useSearchSuggestions(searchQueryRef);
+const selectedCategoryRef = computed(() => props.selectedCategory);
+const { suggestions, hasSuggestions } = useSearchSuggestions(searchQueryRef, {
+  categorySource: selectedCategoryRef,
+});
 
+const typedLength = computed(() => props.searchQuery.trim().length);
+
+/** Dropdown opens at 3+ characters (matches or “No results”). */
 const showSuggestions = computed(
-  () =>
-    searchFocused.value &&
-    props.searchQuery.trim().length > 0 &&
-    hasSuggestions.value,
+  () => searchFocused.value && typedLength.value >= SEARCH_MIN_LENGTH,
 );
+
+const suggestionsEmptyMessage = computed(() => {
+  const q = props.searchQuery.trim();
+  if (props.selectedCategory) {
+    return `No results for “${q}” in this category`;
+  }
+  return `No results for “${q}”`;
+});
 
 const suggestionListId = "header-search-suggestions";
 
@@ -76,6 +124,27 @@ function onSearchBlur() {
     searchFocused.value = false;
     activeSuggestion.value = -1;
   }, 120);
+}
+
+async function openMobileSearch() {
+  mobileSearchOpen.value = true;
+  await nextTick();
+  searchInputEl.value?.focus();
+}
+
+function closeMobileSearch() {
+  cancelBlurClose();
+  mobileSearchOpen.value = false;
+  searchFocused.value = false;
+  activeSuggestion.value = -1;
+}
+
+function syncMobileLayout(event) {
+  const matches = event?.matches ?? untilMdMql?.matches ?? false;
+  isMobileLayout.value = matches;
+  if (!matches) {
+    mobileSearchOpen.value = false;
+  }
 }
 
 function cancelBlurClose() {
@@ -112,18 +181,22 @@ function selectSuggestion(item) {
 }
 
 /**
- * Close the dropdown and apply the typed query on the listing
+ * Close the dropdown and commit search to the listing
  * (same outcome as Enter with no product highlighted).
  */
 function viewAllResults() {
   cancelBlurClose();
   searchFocused.value = false;
   activeSuggestion.value = -1;
+  emit("submit-search");
+}
 
-  const q = props.searchQuery.trim();
-  if (router.currentRoute.value.name !== "products") {
-    router.push({ name: "products", query: q ? { q } : {} });
-  }
+/** Enter with no highlighted suggestion — apply listing search. */
+function submitTypedSearch() {
+  cancelBlurClose();
+  searchFocused.value = false;
+  activeSuggestion.value = -1;
+  emit("submit-search");
 }
 
 /** Highlight the typed search text inside a suggestion title. */
@@ -176,9 +249,32 @@ async function moveActiveSuggestion(nextIndex) {
 }
 
 function onSearchKeydown(event) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    if (showSuggestions.value) {
+      if (activeSuggestion.value === viewAllSuggestionIndex.value) {
+        viewAllResults();
+        return;
+      }
+      if (activeSuggestion.value >= 0) {
+        const item = suggestions.value[activeSuggestion.value];
+        if (item) {
+          selectSuggestion(item);
+          return;
+        }
+      }
+    }
+    submitTypedSearch();
+    return;
+  }
+
   if (!showSuggestions.value) {
-    if (event.key === "Escape" && props.searchQuery) {
-      clearSearch();
+    if (event.key === "Escape") {
+      if (props.searchQuery) {
+        clearSearch();
+      } else if (isMobileLayout.value && mobileSearchOpen.value) {
+        closeMobileSearch();
+      }
     }
     return;
   }
@@ -188,36 +284,15 @@ function onSearchKeydown(event) {
 
   if (event.key === "ArrowDown") {
     event.preventDefault();
-    const next =
-      activeSuggestion.value < last ? activeSuggestion.value + 1 : 0;
+    const next = activeSuggestion.value < last ? activeSuggestion.value + 1 : 0;
     moveActiveSuggestion(next);
     return;
   }
 
   if (event.key === "ArrowUp") {
     event.preventDefault();
-    const next =
-      activeSuggestion.value > 0 ? activeSuggestion.value - 1 : last;
+    const next = activeSuggestion.value > 0 ? activeSuggestion.value - 1 : last;
     moveActiveSuggestion(next);
-    return;
-  }
-
-  if (event.key === "Enter") {
-    if (activeSuggestion.value === viewAllSuggestionIndex.value) {
-      event.preventDefault();
-      viewAllResults();
-      return;
-    }
-    if (activeSuggestion.value >= 0) {
-      event.preventDefault();
-      const item = suggestions.value[activeSuggestion.value];
-      if (item) {
-        selectSuggestion(item);
-        return;
-      }
-    }
-    /* Keep the typed search; just close the suggestions panel. */
-    viewAllResults();
     return;
   }
 
@@ -225,29 +300,62 @@ function onSearchKeydown(event) {
     event.preventDefault();
     searchFocused.value = false;
     activeSuggestion.value = -1;
+    if (isMobileLayout.value && mobileSearchOpen.value) {
+      closeMobileSearch();
+    }
   }
 }
 
-/** Close suggestions when the user clicks outside the search field. */
+/** Close suggestions when the user clicks outside the search control. */
 function onDocumentPointerDown(event) {
-  const root = searchFieldEl.value;
+  const root = searchRootEl.value;
   if (!root || root.contains(event.target)) return;
   searchFocused.value = false;
   activeSuggestion.value = -1;
+  /* Collapse the mobile expanded field when tapping outside (keep typed query). */
+  if (isMobileLayout.value && mobileSearchOpen.value) {
+    mobileSearchOpen.value = false;
+  }
 }
 
 onMounted(() => {
   document.addEventListener("pointerdown", onDocumentPointerDown);
+  if (typeof window !== "undefined" && window.matchMedia) {
+    untilMdMql = window.matchMedia(mediaQueries.untilMd);
+    syncMobileLayout(untilMdMql);
+    untilMdMql.addEventListener("change", syncMobileLayout);
+  }
 });
 
 onUnmounted(() => {
   document.removeEventListener("pointerdown", onDocumentPointerDown);
+  untilMdMql?.removeEventListener("change", syncMobileLayout);
+  untilMdMql = null;
   cancelBlurClose();
 });
 </script>
 
 <template>
-  <div class="header-search">
+  <!--
+    Toggle + field always in the DOM. Mobile CSS hides the field until
+    `.header-search--expanded`; tablet+ CSS always shows the field.
+    Avoids a mount-time height jump from late matchMedia.
+  -->
+  <div
+    ref="searchRootEl"
+    class="header-search"
+    :class="{ 'header-search--expanded': mobileSearchOpen }"
+  >
+    <button
+      type="button"
+      class="header-search__toggle"
+      :class="{ 'header-search__toggle--active': Boolean(searchQuery) }"
+      aria-label="Open search"
+      @click="openMobileSearch"
+    >
+      <Search :size="22" aria-hidden="true" />
+    </button>
+
     <label class="header-search__label" for="header-search-input">
       Search products
     </label>
@@ -255,9 +363,10 @@ onUnmounted(() => {
       <Search class="header-search__icon" :size="18" aria-hidden="true" />
       <input
         id="header-search-input"
+        ref="searchInputEl"
         type="search"
         class="header-search__input"
-        placeholder="Search by name, brand, or tag"
+        placeholder="Search products"
         autocomplete="off"
         role="combobox"
         aria-autocomplete="list"
@@ -280,6 +389,16 @@ onUnmounted(() => {
       >
         <X :size="16" />
       </button>
+      <button
+        v-else-if="mobileSearchOpen"
+        type="button"
+        class="header-search__clear header-search__clear--mobile-close"
+        aria-label="Close search"
+        @mousedown.prevent
+        @click="closeMobileSearch"
+      >
+        <X :size="16" />
+      </button>
 
       <div
         v-if="showSuggestions"
@@ -289,6 +408,13 @@ onUnmounted(() => {
         aria-label="Search suggestions"
       >
         <div ref="suggestionsListEl" class="header-search__suggestion-list">
+          <p
+            v-if="!hasSuggestions"
+            class="header-search__no-results"
+            role="status"
+          >
+            {{ suggestionsEmptyMessage }}
+          </p>
           <button
             v-for="(item, index) in suggestions"
             :id="`${suggestionListId}-${index}`"
@@ -325,6 +451,24 @@ onUnmounted(() => {
                   <template v-else>{{ part.text }}</template>
                 </template>
               </span>
+              <span
+                v-if="item.matchedMeta"
+                class="header-search__suggestion-meta"
+              >
+                <template
+                  v-for="(part, partIndex) in suggestionLabelParts(
+                    item.matchedMeta,
+                  )"
+                  :key="`${item.id}-meta-${partIndex}`"
+                >
+                  <mark
+                    v-if="part.match"
+                    class="header-search__suggestion-mark"
+                    >{{ part.text }}</mark
+                  >
+                  <template v-else>{{ part.text }}</template>
+                </template>
+              </span>
             </span>
           </button>
         </div>
@@ -340,7 +484,7 @@ onUnmounted(() => {
           :aria-selected="activeSuggestion === viewAllSuggestionIndex"
           @mousedown.prevent="viewAllResults"
         >
-          View all results
+          {{ hasSuggestions ? "View all results" : "Search anyway" }}
         </button>
       </div>
     </div>

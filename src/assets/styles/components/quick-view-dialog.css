@@ -1,0 +1,383 @@
+/* Product quick-view modal — same vertical card layout at every breakpoint.
+ * Centered in the viewport.
+ */
+
+.quick-view {
+  position: fixed;
+  inset: 0;
+  /* Above sticky header (100), mobile nav (100), search panel (120); below toasts (200) */
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  overflow-y: auto;
+  background-color: color-mix(in srgb, var(--color-secondary) 45%, transparent);
+}
+
+.quick-view__dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: min(100%, 22rem);
+  max-height: min(90vh, 44rem);
+  margin: auto;
+  overflow: auto;
+  /* Match md+ product card shell */
+  padding: 0;
+  background-color: var(--color-soft-white);
+  color: var(--color-secondary);
+  border: none;
+  border-radius: 0.65rem;
+  box-shadow: 0 2px 5px
+    color-mix(in srgb, var(--color-secondary) 12%, transparent);
+  outline: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.quick-view__close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: color-mix(
+    in srgb,
+    var(--color-soft-white) 90%,
+    transparent
+  );
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.quick-view__close:hover,
+.quick-view__close:focus-visible {
+  background-color: var(--color-soft-white);
+  color: var(--color-primary);
+}
+
+/* Vertical card: image on top, copy below (same as desktop) */
+.quick-view__main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.quick-view__media {
+  position: relative;
+  width: 100%;
+  max-height: 14rem;
+  overflow: hidden;
+  background-color: color-mix(
+    in srgb,
+    var(--color-neutral) 16%,
+    var(--color-bg)
+  );
+}
+
+.quick-view__image {
+  display: block;
+  width: 100%;
+  height: 14rem;
+  object-fit: contain;
+  object-position: center;
+}
+
+.quick-view__gallery-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-soft-white) 92%, transparent);
+  color: var(--color-primary);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.quick-view__gallery-arrow--prev {
+  left: 0.5rem;
+}
+
+.quick-view__gallery-arrow--next {
+  right: 0.5rem;
+}
+
+.quick-view__gallery-arrow:hover:not(:disabled) {
+  border-color: color-mix(
+    in srgb,
+    var(--color-primary) 35%,
+    var(--color-border)
+  );
+  background: var(--color-soft-white);
+}
+
+.quick-view__gallery-arrow:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.quick-view__gallery-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.quick-view__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  /* Match .product-card__body (md+) */
+  padding: 1rem 1.125rem 0;
+}
+
+.quick-view__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1em;
+}
+
+.quick-view__brand {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-view__stock {
+  margin: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-danger);
+  white-space: nowrap;
+}
+
+.quick-view__title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.quick-view__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-h6);
+  line-height: var(--line-height-h6);
+  font-weight: 600;
+  color: var(--color-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.quick-view__favorite {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.05rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background-color: var(--color-soft-white);
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.quick-view__favorite:hover {
+  color: var(--color-favorite);
+}
+
+.quick-view__favorite--active {
+  color: var(--color-favorite);
+}
+
+.quick-view__description {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Compact option chips — same language as card hover strip */
+.quick-view__variants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.15rem;
+}
+
+.quick-view__option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.quick-view__option-label {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.quick-view__option-value {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--color-secondary);
+}
+
+.quick-view__option-value::before {
+  content: "· ";
+}
+
+.quick-view__option-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.quick-view__option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.85rem;
+  min-height: 1.85rem;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  background-color: var(--color-soft-white);
+  color: var(--color-secondary);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.quick-view__option--swatch {
+  width: 1.85rem;
+  height: 1.85rem;
+  min-width: 1.85rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+}
+
+.quick-view__option--selected {
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.quick-view__option--unavailable {
+  opacity: 0.4;
+}
+
+.quick-view__option:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.quick-view__swatch {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--swatch, #ccc);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
+}
+
+.quick-view__body .product-card__pricing {
+  margin-top: 0.15rem;
+  padding-top: 0;
+}
+
+.quick-view__actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 100%;
+  /* Card body ends with 1.75rem bottom padding; actions sit in that rhythm */
+  margin-top: 0.5rem;
+  padding: 0 1.125rem 1.75rem;
+  box-sizing: border-box;
+}
+
+.quick-view__cart {
+  width: 100%;
+  min-height: 2.375rem;
+}
+
+.quick-view__details {
+  justify-self: center;
+  padding-inline: 0;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .quick-view {
+    padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .quick-view__dialog {
+    width: min(100%, 24rem);
+  }
+
+  .quick-view__media {
+    max-height: 16rem;
+  }
+
+  .quick-view__image {
+    height: 16rem;
+  }
+
+  .quick-view__body {
+    padding: 1rem 1.125rem 0;
+  }
+
+  .quick-view__actions {
+    padding: 0 1.125rem 1.75rem;
+  }
+}
