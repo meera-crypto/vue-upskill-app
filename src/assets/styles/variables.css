@@ -1,16 +1,7 @@
-/* Design tokens — colors, spacing, layout sizes */
+/* Design tokens — colors, gaps, radii, touch targets, typography, layout sizes */
 
 :root {
-  /* Palette
-     Primary    → navy blue   (brand, headings, main UI)
-     Secondary  → emerald     (accents, buttons, links)
-     Soft white → warm off-white (surfaces, light text on dark)
-     Black      → pure black  (text accents, overlays, mixes)
-     Tertiary   → soft white  (alias for page / surface background)
-     Neutral    → coral grey  (borders, muted text)
-     Pink       → rose        (favorites heart)
-     Danger     → red         (header count badges)
-  */
+ 
   --color-primary: #7b3f72;
   --color-primary-hover: #562c50;
   --color-secondary: #25232b;
@@ -23,13 +14,6 @@
   --color-pink: #c2185b;
   --color-danger: #af1a18;
   --color-border: #ebe3df;
-
-  --color-text: var(--color-primary);
-  --color-text-muted: var(--color-gray);
-  --color-bg: var(--color-tertiary);
-  --color-accent: var(--color-secondary);
-  --color-favorite: var(--color-pink);
-  --color-badge: var(--color-danger);
 
   /* Container */
   --container-max: 1560px;
@@ -68,6 +52,42 @@
 
   --font-size-h6: clamp(1rem, 0.98rem + 0.3vw, 1.125rem);
   --line-height-h6: 1.45;
+
+  /*
+   * Gap scale — name = px size at 16px root (e.g. --gap-16 = 16px = 1rem).
+   * Use for gap, row-gap, column-gap (and similar spacing).
+   */
+  --gap-0: 0;
+  --gap-4: 0.25rem; /* 4px */
+  --gap-8: 0.5rem; /* 8px */
+  --gap-12: 0.75rem; /* 12px */
+  --gap-16: 1rem; /* 16px */
+  --gap-20: 1.25rem; /* 20px */
+  --gap-24: 1.5rem; /* 24px */
+  --gap-28: 1.75rem; /* 28px */
+  --gap-32: 2rem; /* 32px */
+  --gap-40: 2.5rem; /* 40px */
+  --gap-48: 3rem; /* 48px */
+
+  /*
+   * Radius scale — name = px size at 16px root (e.g. --radius-8 = 8px = 0.5rem).
+   * full = pill; circle = true circle (50%).
+   */
+  --radius-0: 0;
+  --radius-4: 0.25rem; /* 4px */
+  --radius-8: 0.5rem; /* 8px */
+  --radius-12: 0.75rem; /* 12px */
+  --radius-16: 1rem; /* 16px */
+  --radius-20: 1.25rem; /* 20px */
+  --radius-24: 1.5rem; /* 24px */
+  --radius-full: 9999px;
+  --radius-circle: 50%;
+
+  /*
+   * Minimum touch / pointer target for icon-only controls.
+   * 44×44 CSS px — WCAG 2.5.5 Target Size (Enhanced) / common mobile HIG.
+   */
+  --touch-target-min: 2.75rem; /* 44px */
 }
 
 /* md (768px) — tablet+ */

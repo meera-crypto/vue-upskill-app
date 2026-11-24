@@ -8,14 +8,14 @@
 .account-page__inner {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--gap-24);
 }
 
 .account-page__header {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.5rem 1rem;
+  gap: var(--gap-12) var(--gap-20);
 }
 
 .account-page__title {

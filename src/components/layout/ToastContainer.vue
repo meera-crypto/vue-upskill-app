@@ -34,7 +34,7 @@ const { toasts, dismiss } = useToast();
           aria-label="Dismiss notification"
           @click="dismiss(toast.id)"
         >
-          <X :size="14" />
+          <X :size="18" />
         </button>
       </div>
     </TransitionGroup>

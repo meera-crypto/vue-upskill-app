@@ -202,9 +202,12 @@ export function useProductFilters(sourceProducts, catalogProducts) {
     return filters.priceMin > min || filters.priceMax < max;
   });
 
+  /**
+   * Sidebar / chip filters only — category is route + header strip, not
+   * counted here (so Clear all does not leave the category page).
+   */
   const hasActiveFilters = computed(() => {
     return (
-      filters.categories.length > 0 ||
       filters.brands.length > 0 ||
       filters.colors.length > 0 ||
       filters.sizes.length > 0 ||
@@ -379,7 +382,7 @@ export function useProductFilters(sourceProducts, catalogProducts) {
   }
 
   function clearFilters() {
-    filters.categories = [];
+    // Keep category — it is the page path / header strip, not a chip filter.
     filters.brands = [];
     filters.colors = [];
     filters.sizes = [];

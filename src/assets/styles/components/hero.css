@@ -39,11 +39,11 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--gap-20);
   margin-top: 1.5rem;
   padding: 1rem 1.15rem;
   background-color: var(--color-primary);
-  border-radius: 1rem;
+  border-radius: var(--radius-20);
   color: var(--color-soft-white);
   transition: background-color 0.15s ease;
 }
@@ -101,7 +101,7 @@
 .hero-banner__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: var(--gap-8);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -110,7 +110,7 @@
 .hero-banner__tag {
   padding: 0.2rem 0.55rem;
   border: 1px solid color-mix(in srgb, var(--color-soft-white) 35%, transparent);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-4);
   font-size: 0.75rem;
   line-height: 1.3;
   color: var(--color-primary);
@@ -123,12 +123,12 @@
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: var(--gap-16);
   flex: 0 1 auto;
   max-width: none;
   min-width: 0;
   padding: 0.625rem 0.75rem;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-12);
   background-color: color-mix(
     in srgb,
     var(--color-soft-white) 14%,
@@ -157,7 +157,7 @@
   width: 4.5rem;
   height: 4.5rem;
   object-fit: cover;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-12);
   background-color: var(--color-soft-white);
 }
 
@@ -208,7 +208,7 @@
   .hero-banner {
     flex-direction: row;
     align-items: center;
-    gap: 1.5rem;
+    gap: var(--gap-32);
     margin-top: 2rem;
     padding: 1.25rem 1.5rem;
   }

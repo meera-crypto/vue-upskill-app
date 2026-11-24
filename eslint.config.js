@@ -22,7 +22,6 @@ export default [
     ignores: [
       "**/dist/**",
       "**/dist-ssr/**",
-      "**/coverage/**",
       "**/node_modules/**",
     ],
   },

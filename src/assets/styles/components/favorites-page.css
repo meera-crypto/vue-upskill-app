@@ -8,14 +8,14 @@
 .favorites-page__inner {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: var(--gap-24);
 }
 
 .favorites-page__header {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.5rem 1rem;
+  gap: var(--gap-12) var(--gap-20);
 }
 
 .favorites-page__title {
@@ -27,7 +27,7 @@
 
 .favorites-page__count {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--color-gray);
   font-size: 0.9375rem;
 }
 
@@ -37,7 +37,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0;
+  gap: var(--gap-0);
 }
 
 .favorites-page__item {
@@ -47,7 +47,7 @@
 .favorites-page__footer-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--gap-16);
   padding-top: 0.5rem;
   align-self: center;
 }
@@ -56,14 +56,14 @@
 @media (min-width: 768px) {
   .favorites-page__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.25rem;
+    gap: var(--gap-24);
   }
 
   .favorites-page__item .product-card {
     border-bottom: none;
     box-shadow: 0 1px 3px
       color-mix(in srgb, var(--color-black) 10%, transparent);
-    border-radius: 0.5rem;
+    border-radius: var(--radius-12);
     padding: 0;
     height: 100%;
   }

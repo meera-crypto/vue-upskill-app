@@ -260,7 +260,7 @@ function onZoomMove(event) {
         aria-label="Scroll thumbnails left"
         @click="scrollThumbsByDirection(-1)"
       >
-        <ChevronLeft :size="18" aria-hidden="true" />
+        <ChevronLeft :size="22" aria-hidden="true" />
       </button>
       <button
         v-if="thumbsCanOverflow && thumbsCanScrollRight"
@@ -269,7 +269,7 @@ function onZoomMove(event) {
         aria-label="Scroll thumbnails right"
         @click="scrollThumbsByDirection(1)"
       >
-        <ChevronRight :size="18" aria-hidden="true" />
+        <ChevronRight :size="22" aria-hidden="true" />
       </button>
     </div>
 
@@ -301,7 +301,7 @@ function onZoomMove(event) {
         aria-label="Previous image"
         @click="goToPrevImage"
       >
-        <ChevronLeft :size="22" aria-hidden="true" />
+        <ChevronLeft :size="24" aria-hidden="true" />
       </button>
       <button
         v-if="canShowGalleryArrows && canGoNextImage"
@@ -310,7 +310,7 @@ function onZoomMove(event) {
         aria-label="Next image"
         @click="goToNextImage"
       >
-        <ChevronRight :size="22" aria-hidden="true" />
+        <ChevronRight :size="24" aria-hidden="true" />
       </button>
 
       <button
@@ -322,7 +322,7 @@ function onZoomMove(event) {
         @click="emit('toggle-favorite')"
       >
         <Heart
-          :size="20"
+          :size="22"
           :fill="favorited ? 'currentColor' : 'none'"
           aria-hidden="true"
         />

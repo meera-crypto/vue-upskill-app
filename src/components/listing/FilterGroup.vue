@@ -54,7 +54,7 @@ defineEmits(["toggle"]);
         <ChevronDown
           class="filter-group__chevron"
           :class="{ 'filter-group__chevron--open': open }"
-          :size="18"
+          :size="20"
           aria-hidden="true"
         />
       </button>

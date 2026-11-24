@@ -9,8 +9,8 @@
 body {
   margin: 0;
   font-family: var(--font-body);
-  color: var(--color-text);
-  background-color: var(--color-bg);
+  color: var(--color-primary);
+  background-color: var(--color-tertiary);
 }
 
 button,
@@ -34,7 +34,7 @@ textarea {
   font-weight: 600;
   color: var(--color-soft-white);
   background-color: var(--color-secondary);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-4);
   text-decoration: none;
   transform: translateY(-150%);
   transition: transform 0.15s ease;
