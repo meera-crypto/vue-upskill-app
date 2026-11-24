@@ -15,7 +15,7 @@ import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
 import EmptyState from "@/components/listing/EmptyState.vue";
 import { useCart } from "@/composables/useCart.js";
 import { useToast } from "@/composables/useToast.js";
-import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
 import { formatSelectedOptions } from "@/utils/variants.js";
 
@@ -222,3 +222,7 @@ function lineMax(product) {
     </div>
   </div>
 </template>
+
+<style>
+@import "@/assets/styles/components/cart-page.css";
+</style>

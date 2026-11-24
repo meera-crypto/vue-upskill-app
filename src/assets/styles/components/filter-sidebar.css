@@ -44,16 +44,12 @@
 }
 
 /* —— Active chips ——
- * Fixed one-row slot (never grows). Extra chips scroll horizontally so the
- * product grid does not shift when filters are toggled.
+ * Only mounted when filters are on (see ActiveFilterChips v-if).
+ * One scrolling row: chips, then Clear all appended after the last chip.
  */
 .filter-chips {
   --filter-chips-row-height: 2rem;
 
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.5rem 0.75rem;
   box-sizing: border-box;
   height: var(--filter-chips-row-height);
   margin: 0 0 1rem;
@@ -63,19 +59,16 @@
   scrollbar-width: thin;
 }
 
-.filter-chips--empty {
-  pointer-events: none;
-}
-
 .filter-chips__list {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
+  width: max-content;
+  max-width: none;
   margin: 0;
   padding: 0;
   list-style: none;
-  min-width: 0;
 }
 
 .filter-chips__item {
@@ -110,8 +103,13 @@
   color: var(--color-text-muted);
 }
 
+/* Appended after the last chip on all breakpoints (scrolls with the row). */
+.filter-chips__item--clear {
+  display: flex;
+  align-items: center;
+}
+
 .filter-chips__clear {
-  flex-shrink: 0;
   padding: 0;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -638,4 +636,76 @@
 .filter-size:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
+}
+
+/* —— Filter option skeletons (catalog loading) —— */
+
+.filter-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0.15rem 0;
+  list-style: none;
+  min-height: 8.5rem;
+}
+
+.filter-skeleton-list__row {
+  height: 1rem;
+  border-radius: 999px;
+  background-color: color-mix(
+    in srgb,
+    var(--color-neutral) 28%,
+    var(--color-bg)
+  );
+}
+
+.filter-skeleton-list__row:nth-child(odd) {
+  width: 72%;
+}
+
+.filter-skeleton-list__row:nth-child(even) {
+  width: 58%;
+}
+
+.filter-skeleton-swatches,
+.filter-skeleton-sizes {
+  min-height: 2.75rem;
+}
+
+.filter-skeleton-swatches__item {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background-color: color-mix(
+    in srgb,
+    var(--color-neutral) 28%,
+    var(--color-bg)
+  );
+}
+
+.filter-skeleton-sizes__item {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-sm, 4px);
+  background-color: color-mix(
+    in srgb,
+    var(--color-neutral) 28%,
+    var(--color-bg)
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filter-skeleton-list__row,
+  .filter-skeleton-swatches__item,
+  .filter-skeleton-sizes__item {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      color-mix(in srgb, var(--color-soft-white) 55%, transparent) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: product-skeleton-shimmer 1.35s ease-in-out infinite;
+  }
 }

@@ -1,20 +1,27 @@
 /**
- * useProductDetail — load one product by id from the URL query (`?id=`).
+ * useProductDetail — load one product from the URL slug
+ * (`/:category/:slug` or legacy `/product/:slug`).
  *
  * Vue ideas:
- * - `watch` on the id so navigating Product A → Product B refetches
+ * - `watch` on the slug so Product A → Product B refetches
+ * - Resolve slug → id via the shared catalog (ensure catalog is loaded)
  * - AbortController so a slow response for A cannot overwrite B
  * - Optional catalog hit for a faster first paint while the network fetch runs
+ * - Legacy `?id=` still works until the page redirects to the category path
  */
-import { ref, watch, onUnmounted } from "vue";
+import { ref, watch, onUnmounted, toValue } from "vue";
 import { fetchProductById } from "@/services/productService.js";
 import { useProducts } from "@/composables/useProducts.js";
 
 /**
- * @param {import('vue').Ref<string | string[] | undefined> | import('vue').ComputedRef<string | string[] | undefined>} productIdSource
+ * @param {import('vue').MaybeRefOrGetter<string | string[] | undefined | null>} slugSource
+ * @param {{
+ *   legacyIdSource?: import('vue').MaybeRefOrGetter<string | string[] | undefined | null>,
+ * }} [options]
  */
-export function useProductDetail(productIdSource) {
-  const { catalog } = useProducts({ immediate: false });
+export function useProductDetail(slugSource, options = {}) {
+  const { legacyIdSource } = options;
+  const { catalog, load: loadCatalog } = useProducts({ immediate: false });
 
   const product = ref(null);
   const loading = ref(false);
@@ -24,6 +31,12 @@ export function useProductDetail(productIdSource) {
   /** @type {AbortController | null} */
   let controller = null;
 
+  function normalizeSlug(raw) {
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    if (value == null || value === "") return "";
+    return String(value).trim();
+  }
+
   function resolveId(raw) {
     const value = Array.isArray(raw) ? raw[0] : raw;
     if (value == null || value === "") return null;
@@ -32,20 +45,21 @@ export function useProductDetail(productIdSource) {
   }
 
   /**
-   * @param {string | string[] | undefined} rawId
+   * Slug helper used when we only had an id: `/product/id-101`.
+   * @param {string} slug
+   * @returns {string | number | null}
    */
-  async function load(rawId) {
-    const id = resolveId(rawId);
-    controller?.abort();
+  function idFromSlugAlias(slug) {
+    const match = /^id-(\d+)$/i.exec(slug);
+    if (!match) return null;
+    return Number(match[1]);
+  }
 
-    if (id == null) {
-      product.value = null;
-      loading.value = false;
-      error.value = "Missing product id.";
-      notFound.value = true;
-      return;
-    }
-
+  /**
+   * @param {string | number} id
+   * @param {AbortSignal} signal
+   */
+  async function fetchById(id, signal) {
     const cached = catalog.value.find((item) => String(item.id) === String(id));
     if (cached) {
       product.value = cached;
@@ -55,13 +69,12 @@ export function useProductDetail(productIdSource) {
       product.value = null;
     }
 
-    controller = new AbortController();
     loading.value = !cached;
     error.value = null;
     notFound.value = false;
 
     try {
-      const next = await fetchProductById(id, { signal: controller.signal });
+      const next = await fetchProductById(id, { signal });
       product.value = next;
       loading.value = false;
     } catch (err) {
@@ -90,14 +103,80 @@ export function useProductDetail(productIdSource) {
     }
   }
 
+  async function load() {
+    const slug = normalizeSlug(toValue(slugSource));
+    const legacyId = legacyIdSource ? resolveId(toValue(legacyIdSource)) : null;
+
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+
+    if (!slug && legacyId == null) {
+      product.value = null;
+      loading.value = false;
+      error.value = "Missing product.";
+      notFound.value = true;
+      return;
+    }
+
+    loading.value = true;
+    error.value = null;
+    notFound.value = false;
+
+    try {
+      if (slug) {
+        const aliasId = idFromSlugAlias(slug);
+        if (aliasId != null) {
+          await fetchById(aliasId, signal);
+          return;
+        }
+
+        await loadCatalog();
+        if (signal.aborted) return;
+
+        const cached = catalog.value.find(
+          (item) => String(item.slug) === slug,
+        );
+        if (!cached?.id) {
+          product.value = null;
+          loading.value = false;
+          notFound.value = true;
+          error.value = "This product could not be found.";
+          return;
+        }
+
+        await fetchById(cached.id, signal);
+        return;
+      }
+
+      // Legacy `/product?id=` (before redirect to `/product/:slug`).
+      await fetchById(/** @type {string | number} */ (legacyId), signal);
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+      loading.value = false;
+      product.value = null;
+      error.value =
+        err instanceof Error
+          ? err.message
+          : "Something went wrong loading this product.";
+    }
+  }
+
   function retry() {
-    return load(productIdSource.value);
+    return load();
   }
 
   watch(
-    productIdSource,
-    (id) => {
-      load(id);
+    () => {
+      const slug = normalizeSlug(toValue(slugSource));
+      const legacyId = legacyIdSource
+        ? resolveId(toValue(legacyIdSource))
+        : null;
+      // Re-run when catalog first fills so a cold slug lookup can resolve.
+      return `${slug}|${legacyId ?? ""}|${catalog.value.length}`;
+    },
+    () => {
+      load();
     },
     { immediate: true },
   );

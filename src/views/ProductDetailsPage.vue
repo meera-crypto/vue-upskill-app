@@ -1,59 +1,40 @@
 <script setup>
 /**
- * Product details — one product at `/product?id=101&slug=…`.
+ * Product details — one product at `/:category/:slug` (e.g. `/gadgets/iphone-x`).
  *
  * Vue concepts:
- * - `route.query.id` drives the fetch (required, shareable like listing `?q=`)
- * - `route.query.slug` is readable URL text; synced once the product loads
- * - `useProductDetail` watches that id, fetches, and cancels stale requests
- * - Shared `useCart` / `useWishlist` keep header badges in sync
- * - Qty uses a − / typed input / + stepper (clamped to stock)
- * - Variant options: `selectedOptions` ref + `computed` activeVariant
- * - Quick-view picks arrive via `?opts=` / `?variant=` and hydrate selection
- * - Similar products: `computed` from the shared catalog + current product
- * - Compare: same category + all tags matched (any brand); table below reviews
- * - Similar + Recently viewed rows share ProductCarousel (one scroll UI)
+ * - Thin view: fetch + URL sync + wire child components / composables
+ * - `useVariantSelection` shared with Quick View for option / SKU state
+ * - Gallery, purchase panel, and reviews are presentational children
  */
-import { computed, ref, useTemplateRef, watch } from "vue";
+import { computed, useTemplateRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Columns2, Heart, Minus, Plus, Star } from "@lucide/vue";
 import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
 import EmptyState from "@/components/listing/EmptyState.vue";
 import ProductCard from "@/components/product/ProductCard.vue";
 import ProductCarousel from "@/components/product/ProductCarousel.vue";
 import ProductCompare from "@/components/product/ProductCompare.vue";
-import ProductRating from "@/components/product/ProductRating.vue";
+import ProductGallery from "@/components/product/ProductGallery.vue";
+import ProductPurchasePanel from "@/components/product/ProductPurchasePanel.vue";
+import ProductReviews from "@/components/product/ProductReviews.vue";
 import RecentlyViewedProducts from "@/components/product/RecentlyViewedProducts.vue";
-import {
-  COLOR_SWATCH_HEX,
-  PRODUCT_IMAGE_FALLBACK,
-  hasValidDiscount,
-} from "@/services/productService.js";
 import { useProductDetail } from "@/composables/useProductDetail.js";
 import { useProducts } from "@/composables/useProducts.js";
 import { useCart } from "@/composables/useCart.js";
 import { useWishlist } from "@/composables/useWishlist.js";
 import { useRecentlyViewed } from "@/composables/useRecentlyViewed.js";
 import { useToast } from "@/composables/useToast.js";
+import { useVariantSelection } from "@/composables/useVariantSelection.js";
 import {
   productDetailsTo,
-  selectedOptionsFromQuery,
+  selectedOptionsFromNavigation,
 } from "@/utils/productRoutes.js";
-import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
+import { resolveStorefrontCategory } from "@/utils/categoryGroups.js";
 import { getComparableProducts } from "@/utils/compareProducts.js";
 import {
   getSimilarProducts,
   similarProductsListingTo,
 } from "@/utils/similarProducts.js";
-import {
-  cartLineKey,
-  findVariantByOptions,
-  formatSelectedOptions,
-  isOptionValueAvailable,
-  isVariantSelectionComplete,
-  productHasVariants,
-  productOptions,
-} from "@/utils/variants.js";
 
 /** Max cards in the horizontal similar row before “View all”. */
 const SIMILAR_PREVIEW_LIMIT = 8;
@@ -62,10 +43,16 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 
-/** Read from `?id=` so refresh / share / back keep the same product. */
-const productId = computed(() => route.query.id);
-const { product, loading, error, notFound, retry } =
-  useProductDetail(productId);
+const productSlug = computed(() => {
+  const raw = route.params.slug;
+  return Array.isArray(raw) ? raw[0] : raw;
+});
+const legacyProductId = computed(() => route.query.id);
+
+const { product, loading, error, notFound, retry } = useProductDetail(
+  productSlug,
+  { legacyIdSource: legacyProductId },
+);
 
 const { trackView } = useRecentlyViewed();
 
@@ -78,35 +65,30 @@ const {
   setQuantity,
 } = useCart();
 const { isFavorite, toggleFavorite } = useWishlist();
-/** Shared catalog — same fetch the listing uses (loads on mount if needed). */
 const { catalog } = useProducts();
 
-const selectedImageIndex = ref(0);
+const {
+  selectedOptions,
+  hasVariants,
+  optionGroups,
+  activeVariant,
+  lineKey,
+  productHasStock,
+  canPurchase,
+  showNotifyMe,
+  inStock,
+  maxQuantity,
+  displayPrice,
+  selectionHint,
+  fewLeft,
+  setOptions,
+  selectOption,
+  optionValueAvailable,
+  optionSwatchHex,
+  ensureVariantReady,
+} = useVariantSelection(product);
 
-/**
- *  image zoom (desktop hover):
- * - translucent square lens on the main image
- * - large zoomed preview panel to the right of the gallery
- */
-const isZooming = ref(false);
-const lensStyle = ref(/** @type {Record<string, string>} */ ({}));
-const zoomResultStyle = ref(/** @type {Record<string, string>} */ ({}));
-/** How much larger the side panel shows vs the lens region. */
-const ZOOM_LEVEL = 2;
-
-/**
- * Quantity field value as a string so the input can be briefly empty while typing.
- * Local UI only until Add to cart / Buy now.
- */
-const quantityInput = ref("1");
-
-/**
- * Selected option map for variant products, e.g. `{ Color: "Blue", Size: "M" }`.
- * Plain object in a ref — replace the whole object when an option changes so
- * Vue tracks the update (same idea as updating a reactive filter bag).
- * May be hydrated from `?opts=` / `?variant=` (card quick view → details).
- */
-const selectedOptions = ref(/** @type {Record<string, string>} */ ({}));
+const purchasePanelRef = useTemplateRef("purchasePanelRef");
 
 const displayName = computed(
   () => product.value?.title?.trim() || "Untitled product",
@@ -119,161 +101,6 @@ const brandOrCategory = computed(() => {
   return product.value?.categoryLabel || product.value?.category || "";
 });
 
-const hasVariants = computed(() => productHasVariants(product.value));
-const optionGroups = computed(() => productOptions(product.value));
-
-const selectionComplete = computed(() =>
-  isVariantSelectionComplete(product.value, selectedOptions.value),
-);
-
-/** Matched SKU for the current option combination (or null). */
-const activeVariant = computed(() =>
-  findVariantByOptions(product.value, selectedOptions.value),
-);
-
-const lineKey = computed(() =>
-  product.value ? cartLineKey(product.value, activeVariant.value) : "",
-);
-
-/** Parent catalog stock (any variant left). */
-const productHasStock = computed(() => (product.value?.stock ?? 0) > 0);
-
-/**
- * Purchasable right now: in stock, and if variants exist the selection must
- * resolve to an in-stock SKU.
- */
-const canPurchase = computed(() => {
-  if (!productHasStock.value) return false;
-  if (!hasVariants.value) return true;
-  if (!selectionComplete.value) return false;
-  return (activeVariant.value?.stock ?? 0) > 0;
-});
-
-/**
- * Show “Notify me” instead of “Buy now” when the product (or selected
- * combination) is out of stock. Incomplete variant picks still show Buy now
- * (disabled) so shoppers finish selecting options first.
- */
-const showNotifyMe = computed(() => {
-  if (!product.value) return false;
-  if (!productHasStock.value) return true;
-  if (!hasVariants.value || !selectionComplete.value) return false;
-  return (activeVariant.value?.stock ?? 0) <= 0;
-});
-
-const inStock = computed(() => {
-  if (!hasVariants.value) return productHasStock.value;
-  if (!selectionComplete.value) return productHasStock.value;
-  return (activeVariant.value?.stock ?? 0) > 0;
-});
-
-const maxQuantity = computed(() => {
-  const stock = hasVariants.value
-    ? Number(activeVariant.value?.stock)
-    : Number(product.value?.stock);
-  return Number.isFinite(stock) && stock > 0 ? stock : 1;
-});
-
-const displayPrice = computed(() => {
-  if (
-    activeVariant.value &&
-    Number.isFinite(Number(activeVariant.value.price))
-  ) {
-    return Number(activeVariant.value.price);
-  }
-  return Number(product.value?.price) || 0;
-});
-
-const missingOptionNames = computed(() => {
-  if (!hasVariants.value) return [];
-  return optionGroups.value
-    .filter((option) => !selectedOptions.value[option.name])
-    .map((option) => option.name);
-});
-
-const selectionHint = computed(() => {
-  if (!hasVariants.value) return "";
-  if (missingOptionNames.value.length > 0) {
-    return `Select ${missingOptionNames.value.join(" and ")}`;
-  }
-  if (selectionComplete.value && !activeVariant.value) {
-    return "This combination is unavailable";
-  }
-  if (selectionComplete.value && (activeVariant.value?.stock ?? 0) <= 0) {
-    return "This combination is out of stock";
-  }
-  return "";
-});
-
-/**
- * Final qty for Add to cart / Buy now.
- * `null` means the field is empty or invalid.
- */
-const resolvedQuantity = computed(() => {
-  const raw = String(quantityInput.value).trim();
-  if (!raw) return null;
-  const n = Math.floor(Number(raw));
-  if (!Number.isFinite(n) || n < 1) return null;
-  return Math.min(maxQuantity.value, n);
-});
-
-const canDecreaseQty = computed(() => (resolvedQuantity.value ?? 1) > 1);
-const canIncreaseQty = computed(
-  () => (resolvedQuantity.value ?? 0) < maxQuantity.value,
-);
-
-const showDiscount = computed(() =>
-  product.value ? hasValidDiscount(product.value) : false,
-);
-
-const discountPercentLabel = computed(() => {
-  if (!showDiscount.value || !product.value) return "";
-  return `${Math.round(Number(product.value.discountPercentage))}% off`;
-});
-
-const fewLeft = computed(() => {
-  if (!canPurchase.value) return false;
-  const stock = hasVariants.value
-    ? Number(activeVariant.value?.stock)
-    : Number(product.value?.stock);
-  return Number.isFinite(stock) && stock > 0 && stock < 30;
-});
-
-const displaySku = computed(() => {
-  if (activeVariant.value?.sku) return String(activeVariant.value.sku);
-  return product.value?.sku ? String(product.value.sku) : "";
-});
-
-const hasRating = computed(() => typeof product.value?.rating === "number");
-
-/** CSS modifier for the badge background (red → green by score). */
-const ratingBadgeTone = computed(() =>
-  getRatingBadgeTone(product.value?.rating),
-);
-
-const ratingLabel = computed(() => {
-  if (!hasRating.value || !product.value) return "";
-  const score = product.value.rating.toFixed(1);
-  const reviews = product.value.reviewCount;
-  if (typeof reviews === "number" && reviews > 0) {
-    return `${score} out of 5 stars, ${reviews} review${reviews === 1 ? "" : "s"}`;
-  }
-  return `${score} out of 5 stars`;
-});
-
-const images = computed(() => {
-  const list = Array.isArray(product.value?.images)
-    ? product.value.images.filter(
-        (url) => typeof url === "string" && url.length > 0,
-      )
-    : [];
-  return list.length > 0 ? list : [PRODUCT_IMAGE_FALLBACK];
-});
-
-const activeImage = computed(
-  () => images.value[selectedImageIndex.value] ?? images.value[0],
-);
-
 const favorited = computed(() =>
   product.value ? isFavorite(product.value.id) : false,
 );
@@ -282,15 +109,10 @@ const reviews = computed(() =>
   Array.isArray(product.value?.reviews) ? product.value.reviews : [],
 );
 
-/**
- * Other catalog products in the same category, ranked by brand + shared tags.
- * `computed` recalculates when the detail product or catalog changes.
- */
 const similarProducts = computed(() =>
   getSimilarProducts(product.value, catalog.value),
 );
 
-/** First 8 for the horizontal scroller. */
 const similarPreview = computed(() =>
   similarProducts.value.slice(0, SIMILAR_PREVIEW_LIMIT),
 );
@@ -299,118 +121,80 @@ const showSimilarViewAll = computed(
   () => similarProducts.value.length > SIMILAR_PREVIEW_LIMIT,
 );
 
-/** Listing route with category (or brand) filters pre-applied. */
 const similarViewAllTo = computed(() =>
   similarProductsListingTo(product.value),
 );
 
-/** Remeasure ProductCarousel arrows when similar row content changes. */
 const similarWatchKey = computed(
   () =>
     `${product.value?.id ?? ""}:${similarPreview.value.length}:${showSimilarViewAll.value}`,
 );
 
-/**
- * Compare peers: same category + identical tags, any brand.
- * Button + section only render when at least one peer exists.
- */
 const comparableProducts = computed(() =>
   getComparableProducts(product.value, catalog.value),
 );
 
 const canCompare = computed(() => comparableProducts.value.length > 0);
 
-/** Child expose: openPanel() scrolls the compare section into view. */
 const productCompareRef = useTemplateRef("productCompareRef");
+
+/** Gallery jumps when the active variant names an image frame. */
+const variantImageIndex = computed(() => {
+  const index = Number(activeVariant.value?.imageIndex);
+  return Number.isFinite(index) ? index : null;
+});
 
 function onOpenCompare() {
   productCompareRef.value?.openPanel?.();
 }
 
-const infoRows = computed(() => {
-  if (!product.value) return [];
-  /** @type {{ label: string, value: string }[]} */
-  const rows = [];
-  if (displaySku.value) rows.push({ label: "SKU", value: displaySku.value });
-  const selectedLabel = formatSelectedOptions(selectedOptions.value);
-  if (selectedLabel) {
-    rows.push({ label: "Selected", value: selectedLabel });
-  }
-  if (product.value.availabilityStatus) {
-    rows.push({
-      label: "Availability",
-      value: product.value.availabilityStatus,
-    });
-  }
-  if (product.value.shippingInformation) {
-    rows.push({
-      label: "Shipping",
-      value: product.value.shippingInformation,
-    });
-  }
-  if (product.value.warrantyInformation) {
-    rows.push({
-      label: "Warranty",
-      value: product.value.warrantyInformation,
-    });
-  }
-  if (product.value.returnPolicy) {
-    rows.push({ label: "Returns", value: product.value.returnPolicy });
-  }
-  return rows;
-});
-
-/** When a variant maps to a gallery frame, jump the main image. */
-watch(activeVariant, (variant) => {
-  if (!variant) return;
-  const index = Number(variant.imageIndex);
-  if (Number.isFinite(index) && index >= 0 && index < images.value.length) {
-    selectedImageIndex.value = index;
-  }
-});
-
 /**
- * Write id / slug / opts / variant into the URL without adding history entries.
- * Keeps refresh + share in sync with the current selection.
+ * Keep path on `/:category/:slug` and variant picks in `?opts=` / `?variant=`.
  */
-function syncDetailsQuery() {
-  if (!product.value?.id) return;
+function syncDetailsLocation() {
+  if (!product.value?.slug) return;
 
-  const expected = productDetailsTo(product.value, {
+  const target = productDetailsTo(product.value, {
     selectedOptions: selectedOptions.value,
-  }).query;
+  });
+  const targetQuery = target.query ?? {};
 
-  const keys = new Set([...Object.keys(expected), ...Object.keys(route.query)]);
-  let changed = false;
-  for (const key of keys) {
-    const nextVal = expected[key] ?? "";
-    const rawCurrent = route.query[key];
-    const currentVal = Array.isArray(rawCurrent)
-      ? (rawCurrent[0] ?? "")
-      : (rawCurrent ?? "");
-    if (String(currentVal) !== String(nextVal)) {
-      changed = true;
-      break;
-    }
+  const onLegacyFlat =
+    route.name === "product-details-legacy" ||
+    route.name === "product-details-unscoped";
+  const slugMismatch = String(route.params.slug ?? "") !== target.params.slug;
+  const routeCategory = resolveStorefrontCategory(route.params.category);
+  const targetCategory = target.params.category ?? "";
+  const categoryMismatch =
+    Boolean(targetCategory) && routeCategory !== targetCategory;
+  const hasStaleIdQuery = route.query.id != null || route.query.slug != null;
+
+  const currentOpts = route.query.opts != null ? String(route.query.opts) : "";
+  const currentVariant =
+    route.query.variant != null ? String(route.query.variant) : "";
+  const nextOpts = targetQuery.opts ?? "";
+  const nextVariant = targetQuery.variant ?? "";
+  const variantQueryMismatch =
+    currentOpts !== nextOpts || currentVariant !== nextVariant;
+
+  if (
+    !onLegacyFlat &&
+    !slugMismatch &&
+    !categoryMismatch &&
+    !hasStaleIdQuery &&
+    !variantQueryMismatch
+  ) {
+    return;
   }
-  if (!changed) return;
 
   router.replace({
-    name: "product-details",
-    query: expected,
+    name: target.name,
+    params: target.params,
+    query: targetQuery,
+    state: target.state,
   });
 }
 
-/**
- * Keep slug + variant query in sync with the loaded product (id still wins
- * for fetching). Hydrate quick-view picks from the URL when the product changes.
- * Also records the visit for “Recently viewed”.
- *
- * `immediate: true` matters: useProductDetail may set a cached product during
- * setup *before* this watch is registered. Without immediate, that first value
- * is skipped; the later network replace has the same id so we never hydrate,
- * then syncDetailsQuery() would strip `opts` from the URL.
- */
 watch(
   product,
   (next, prev) => {
@@ -419,163 +203,38 @@ watch(
     const productChanged = String(next.id) !== String(prev?.id ?? "");
     if (productChanged) {
       trackView(next);
-      selectedImageIndex.value = 0;
-      quantityInput.value = "1";
-      selectedOptions.value = selectedOptionsFromQuery(next, route.query);
+      setOptions(
+        selectedOptionsFromNavigation(next, route.query, window.history.state),
+      );
     } else if (Object.keys(selectedOptions.value).length === 0) {
-      // Cache → network refresh (same id): still apply URL picks if empty.
-      const fromQuery = selectedOptionsFromQuery(next, route.query);
-      if (Object.keys(fromQuery).length > 0) {
-        selectedOptions.value = fromQuery;
+      const fromNav = selectedOptionsFromNavigation(
+        next,
+        route.query,
+        window.history.state,
+      );
+      if (Object.keys(fromNav).length > 0) {
+        setOptions(fromNav);
       }
     }
 
-    syncDetailsQuery();
+    syncDetailsLocation();
   },
   { immediate: true },
 );
 
-/** If stock drops below the typed qty, clamp to the new max. */
-watch(maxQuantity, (max) => {
-  const n = Math.floor(Number(quantityInput.value));
-  if (Number.isFinite(n) && n > max) {
-    quantityInput.value = String(max);
-  }
-});
+watch(
+  selectedOptions,
+  () => {
+    if (!product.value?.id) return;
+    syncDetailsLocation();
+  },
+  { deep: true },
+);
 
 /**
- * Write a clamped whole number into the qty field.
- * @param {number} n
+ * @param {number | null} qty
  */
-function setQtyInput(n) {
-  const clamped = Math.min(maxQuantity.value, Math.max(1, Math.floor(n)));
-  quantityInput.value = String(clamped);
-}
-
-function decreaseQty() {
-  setQtyInput((resolvedQuantity.value ?? 1) - 1);
-}
-
-function increaseQty() {
-  setQtyInput((resolvedQuantity.value ?? 0) + 1);
-}
-
-/** Normalize empty / over-max / fractional values when the field loses focus. */
-function onQtyBlur() {
-  const qty = resolvedQuantity.value;
-  quantityInput.value = String(qty == null ? 1 : qty);
-}
-
-function onImageError(event) {
-  if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
-    event.target.src = PRODUCT_IMAGE_FALLBACK;
-  }
-}
-
-function selectImage(index) {
-  selectedImageIndex.value = index;
-}
-
-/**
- * side zoom needs desktop layout + real hover.
- * Below md the gallery is full-width, so a right-hand panel would clip.
- */
-function canUseImageZoom() {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia(
-      "(hover: hover) and (pointer: fine) and (min-width: 768px)",
-    ).matches
-  );
-}
-
-function onZoomEnter() {
-  if (!canUseImageZoom()) return;
-  isZooming.value = true;
-}
-
-function onZoomLeave() {
-  isZooming.value = false;
-}
-
-/**
- * zoom: lens = stage / ZOOM_LEVEL so the side panel
- * (same size as the stage) shows exactly that region magnified.
- * @param {MouseEvent} event
- */
-function onZoomMove(event) {
-  if (!canUseImageZoom()) return;
-
-  const stage = /** @type {HTMLElement} */ (event.currentTarget);
-  const rect = stage.getBoundingClientRect();
-  const lensW = rect.width / ZOOM_LEVEL;
-  const lensH = rect.height / ZOOM_LEVEL;
-
-  const lensX = Math.max(
-    0,
-    Math.min(event.clientX - rect.left - lensW / 2, rect.width - lensW),
-  );
-  const lensY = Math.max(
-    0,
-    Math.min(event.clientY - rect.top - lensH / 2, rect.height - lensH),
-  );
-
-  lensStyle.value = {
-    width: `${lensW}px`,
-    height: `${lensH}px`,
-    left: `${lensX}px`,
-    top: `${lensY}px`,
-  };
-
-  zoomResultStyle.value = {
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    backgroundImage: `url(${JSON.stringify(activeImage.value)})`,
-    backgroundRepeat: "no-repeat",
-    backgroundSize: `${rect.width * ZOOM_LEVEL}px ${rect.height * ZOOM_LEVEL}px`,
-    backgroundPosition: `-${lensX * ZOOM_LEVEL}px -${lensY * ZOOM_LEVEL}px`,
-  };
-  isZooming.value = true;
-}
-
-/**
- * @param {string} optionName
- * @param {string} optionValue
- */
-function selectOption(optionName, optionValue) {
-  selectedOptions.value = {
-    ...selectedOptions.value,
-    [optionName]: optionValue,
-  };
-  syncDetailsQuery();
-}
-
-/**
- * @param {string} optionName
- * @param {string} optionValue
- */
-function optionValueAvailable(optionName, optionValue) {
-  return isOptionValueAvailable(
-    product.value,
-    optionName,
-    optionValue,
-    selectedOptions.value,
-  );
-}
-
-/**
- * Color options get swatches when we know a hex; everything else is a chip.
- * @param {string} optionName
- * @param {string} optionValue
- */
-function optionSwatchHex(optionName, optionValue) {
-  if (optionName.toLowerCase() !== "color") return "";
-  const key = String(optionValue).trim().toLowerCase();
-  return COLOR_SWATCH_HEX[key] || "";
-}
-
-function quantityForCart() {
-  const qty = resolvedQuantity.value;
+function resolveQtyOrToast(qty) {
   if (qty == null) {
     toast.info("Enter a quantity of 1 or more");
     return null;
@@ -583,31 +242,22 @@ function quantityForCart() {
   return qty;
 }
 
-function ensureVariantReady() {
-  if (!product.value) return false;
-  if (!hasVariants.value) return true;
-  if (!selectionComplete.value) {
-    toast.info(selectionHint.value || "Select product options");
-    return false;
-  }
-  if (!activeVariant.value || (activeVariant.value.stock ?? 0) <= 0) {
-    toast.info(selectionHint.value || "This combination is unavailable");
-    return false;
-  }
-  return true;
-}
-
-function onAddToCart() {
+function onAddToCart(qtyFromPanel) {
   if (!product.value || !productHasStock.value) return;
-  if (!ensureVariantReady()) return;
+  const ready = ensureVariantReady();
+  if (!ready.ok) {
+    toast.info(ready.message);
+    return;
+  }
 
-  const qty = quantityForCart();
+  const qty = resolveQtyOrToast(
+    qtyFromPanel ?? purchasePanelRef.value?.quantityForCart?.() ?? null,
+  );
   if (qty == null) return;
 
   const key = lineKey.value;
   const variant = activeVariant.value;
 
-  // Each click adds the selected qty (capped by stock), including repeats.
   if (key && isInCart(key)) {
     const before = getQuantity(key);
     setQuantity(key, before + qty);
@@ -627,15 +277,21 @@ function onAddToCart() {
   toast.error(`Couldn't add ${displayName.value} to cart`);
 }
 
-function onBuyNow() {
+function onBuyNow(qtyFromPanel) {
   if (!product.value || !productHasStock.value) return;
-  if (!ensureVariantReady()) return;
+  const ready = ensureVariantReady();
+  if (!ready.ok) {
+    toast.info(ready.message);
+    return;
+  }
 
   const key = lineKey.value;
   const variant = activeVariant.value;
   const wasNew = !(key && isInCart(key));
   if (wasNew) {
-    const qty = quantityForCart();
+    const qty = resolveQtyOrToast(
+      qtyFromPanel ?? purchasePanelRef.value?.quantityForCart?.() ?? null,
+    );
     if (qty == null) return;
     if (!addToCart(product.value, qty, variant)) {
       toast.error(`Couldn't add ${displayName.value} to cart`);
@@ -649,7 +305,6 @@ function onBuyNow() {
   router.push({ name: "cart" });
 }
 
-/** Simulated back-in-stock alert (no real email signup yet). */
 function onNotifyMe() {
   if (!product.value) return;
   toast.info(`We'll notify you when ${displayName.value} is back in stock`);
@@ -705,13 +360,9 @@ function onSimilarViewAll() {
   else continueShopping();
 }
 
-/**
- * Products → Category → Product name.
- * While loading / not found, keep a short trail so navigation still works.
- */
 const breadcrumbItems = computed(() => {
   /** @type {{ label: string, to?: { name: string, query?: Record<string, string> } }[]} */
-  const items = [{ label: "Products", to: { name: "products" } }];
+  const items = [{ label: "Home", to: { name: "products" } }];
 
   if (!product.value) {
     items.push({
@@ -730,7 +381,7 @@ const breadcrumbItems = computed(() => {
   if (category && categoryLabel) {
     items.push({
       label: categoryLabel,
-      to: { name: "products", query: { category } },
+      to: { name: "products-category", params: { category } },
     });
   }
 
@@ -740,12 +391,10 @@ const breadcrumbItems = computed(() => {
 </script>
 
 <template>
-  <!-- Header / <main> are in App.vue — shared across routes. -->
   <div class="product-details">
     <div class="container product-details__inner">
       <Breadcrumbs :items="breadcrumbItems" />
 
-      <!-- Loading -->
       <div
         v-if="loading && !product"
         class="product-details__state"
@@ -767,7 +416,6 @@ const breadcrumbItems = computed(() => {
         <p class="product-details__state-text">Loading product…</p>
       </div>
 
-      <!-- Error / not found -->
       <EmptyState
         v-else-if="(error || notFound) && !product"
         variant="error"
@@ -792,372 +440,46 @@ const breadcrumbItems = computed(() => {
         </template>
       </EmptyState>
 
-      <!-- Product -->
       <template v-else-if="product">
         <div class="product-details__layout">
-          <section class="product-details__gallery" aria-label="Product images">
-            <!-- Vertical strip to the left of the main image -->
-            <ul
-              v-if="images.length > 1"
-              class="product-details__thumbs"
-              aria-label="More images"
-            >
-              <li v-for="(url, index) in images" :key="`${url}-${index}`">
-                <button
-                  type="button"
-                  class="product-details__thumb"
-                  :class="{
-                    'product-details__thumb--active':
-                      index === selectedImageIndex,
-                  }"
-                  :aria-label="`View image ${index + 1}`"
-                  :aria-current="
-                    index === selectedImageIndex ? 'true' : undefined
-                  "
-                  @click="selectImage(index)"
-                >
-                  <img
-                    :src="url"
-                    :alt="`${displayName} thumbnail ${index + 1}`"
-                    width="72"
-                    height="72"
-                    loading="lazy"
-                    @error="onImageError"
-                  />
-                </button>
-              </li>
-            </ul>
+          <ProductGallery
+            :product="product"
+            :display-name="displayName"
+            :favorited="favorited"
+            :variant-image-index="variantImageIndex"
+            @toggle-favorite="onToggleFavorite"
+          />
 
-            <div
-              class="product-details__stage"
-              @mouseenter="onZoomEnter"
-              @mousemove="onZoomMove"
-              @mouseleave="onZoomLeave"
-            >
-              <img
-                class="product-details__image"
-                :src="activeImage"
-                :alt="displayName"
-                width="500"
-                height="500"
-                @error="onImageError"
-              />
-              <div
-                v-show="isZooming"
-                class="product-details__lens"
-                :style="lensStyle"
-                aria-hidden="true"
-              />
-              <button
-                type="button"
-                class="product-details__favorite"
-                :class="{
-                  'product-details__favorite--active': favorited,
-                }"
-                :aria-label="
-                  favorited ? 'Remove from favorites' : 'Add to favorites'
-                "
-                :aria-pressed="favorited"
-                @click="onToggleFavorite"
-              >
-                <Heart
-                  :size="20"
-                  :fill="favorited ? 'currentColor' : 'none'"
-                  aria-hidden="true"
-                />
-              </button>
-            </div>
-
-            <!-- Zooms the lens region; overlays the info column  -->
-            <div
-              v-show="isZooming"
-              class="product-details__zoom-result"
-              :style="zoomResultStyle"
-              aria-hidden="true"
-            />
-          </section>
-
-          <section
-            class="product-details__info"
-            aria-labelledby="product-title"
-          >
-            <p v-if="brandOrCategory" class="product-details__brand">
-              {{ brandOrCategory }}
-            </p>
-
-            <h1 id="product-title" class="product-details__title">
-              {{ displayName }}
-            </h1>
-
-            <ProductRating
-              v-if="hasRating"
-              size="lg"
-              :rating="product.rating"
-              :review-count="product.reviewCount"
-              :tone="ratingBadgeTone"
-              :label="ratingLabel"
-            >
-              <template #icon>
-                <Star
-                  class="rating-badge__icon"
-                  :size="16"
-                  fill="currentColor"
-                  aria-hidden="true"
-                />
-              </template>
-            </ProductRating>
-
-            <div class="product-details__pricing">
-              <p class="product-details__price">
-                ${{ displayPrice.toFixed(2) }}
-              </p>
-              <p
-                v-if="showDiscount && !activeVariant"
-                class="product-details__price product-details__price--original"
-              >
-                ${{ Number(product.originalPrice).toFixed(2) }}
-              </p>
-              <p
-                v-if="discountPercentLabel && !activeVariant"
-                class="product-details__offer"
-              >
-                {{ discountPercentLabel }}
-              </p>
-            </div>
-
-            <p
-              class="product-details__stock"
-              :class="{
-                'product-details__stock--out': !inStock,
-                'product-details__stock--low': fewLeft,
-              }"
-              aria-live="polite"
-            >
-              <template v-if="!productHasStock">Out of stock</template>
-              <template v-else-if="selectionHint && hasVariants">
-                {{ selectionHint }}
-              </template>
-              <template v-else-if="fewLeft">Only a few left</template>
-              <template v-else>In stock</template>
-            </p>
-
-            <p v-if="product.description" class="product-details__description">
-              {{ product.description }}
-            </p>
-
-            <!--
-              Variant pickers — only for products with a local overlay.
-              selectedOptions is a ref object; each click replaces it so Vue
-              re-runs activeVariant / canPurchase computeds.
-            -->
-            <div
-              v-if="hasVariants"
-              class="product-details__variants"
-              aria-label="Product options"
-            >
-              <div
-                v-for="group in optionGroups"
-                :key="group.name"
-                class="product-details__option-group"
-              >
-                <p
-                  class="product-details__option-label"
-                  :id="`option-${group.name}`"
-                >
-                  {{ group.name }}
-                  <span
-                    v-if="selectedOptions[group.name]"
-                    class="product-details__option-value"
-                  >
-                    {{ selectedOptions[group.name] }}
-                  </span>
-                </p>
-                <div
-                  class="product-details__option-values"
-                  role="group"
-                  :aria-labelledby="`option-${group.name}`"
-                >
-                  <button
-                    v-for="value in group.values"
-                    :key="`${group.name}-${value}`"
-                    type="button"
-                    class="product-details__option"
-                    :class="{
-                      'product-details__option--selected':
-                        selectedOptions[group.name] === value,
-                      'product-details__option--swatch': !!optionSwatchHex(
-                        group.name,
-                        value,
-                      ),
-                      'product-details__option--unavailable':
-                        !optionValueAvailable(group.name, value),
-                    }"
-                    :style="
-                      optionSwatchHex(group.name, value)
-                        ? {
-                            '--swatch': optionSwatchHex(group.name, value),
-                          }
-                        : undefined
-                    "
-                    :aria-pressed="selectedOptions[group.name] === value"
-                    :aria-label="`${group.name} ${value}`"
-                    :title="
-                      optionValueAvailable(group.name, value)
-                        ? value
-                        : `${value} unavailable`
-                    "
-                    @click="selectOption(group.name, value)"
-                  >
-                    <span
-                      v-if="optionSwatchHex(group.name, value)"
-                      class="product-details__swatch"
-                      aria-hidden="true"
-                    />
-                    <span v-else>{{ value }}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <ul
-              v-if="product.tags?.length"
-              class="product-details__tags"
-              aria-label="Tags"
-            >
-              <li
-                v-for="tag in product.tags"
-                :key="tag"
-                class="product-details__tag"
-              >
-                {{ tag }}
-              </li>
-            </ul>
-
-            <div class="product-details__buy-box">
-              <div class="product-details__purchase-row">
-                <div class="product-details__qty">
-                  <span
-                    id="product-qty-label"
-                    class="product-details__qty-label"
-                  >
-                    Quantity
-                  </span>
-                  <div
-                    class="product-details__qty-stepper"
-                    role="group"
-                    aria-labelledby="product-qty-label"
-                  >
-                    <button
-                      type="button"
-                      class="product-details__qty-btn"
-                      :disabled="!canPurchase || !canDecreaseQty"
-                      aria-label="Decrease quantity"
-                      @click="decreaseQty"
-                    >
-                      <Minus :size="16" aria-hidden="true" />
-                    </button>
-                    <input
-                      id="product-qty"
-                      v-model="quantityInput"
-                      class="product-details__qty-input"
-                      type="number"
-                      inputmode="numeric"
-                      min="1"
-                      :max="maxQuantity"
-                      step="1"
-                      :disabled="!canPurchase"
-                      :aria-label="`Quantity (max ${maxQuantity})`"
-                      @blur="onQtyBlur"
-                    />
-                    <button
-                      type="button"
-                      class="product-details__qty-btn"
-                      :disabled="!canPurchase || !canIncreaseQty"
-                      aria-label="Increase quantity"
-                      @click="increaseQty"
-                    >
-                      <Plus :size="16" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  class="btn btn--primary product-details__cart"
-                  :disabled="!canPurchase"
-                  @click="onAddToCart"
-                >
-                  Add to cart
-                </button>
-              </div>
-
-              <button
-                type="button"
-                class="btn btn--tertiary product-details__buy"
-                :disabled="showNotifyMe ? false : !canPurchase"
-                @click="showNotifyMe ? onNotifyMe() : onBuyNow()"
-              >
-                {{ showNotifyMe ? "Notify me" : "Buy now" }}
-              </button>
-            </div>
-
-            <button
-              v-if="canCompare"
-              type="button"
-              class="btn btn--secondary product-details__compare-btn"
-              @click="onOpenCompare"
-            >
-              <Columns2 :size="18" aria-hidden="true" />
-              Compare with similar
-            </button>
-
-            <dl v-if="infoRows.length" class="product-details__meta-list">
-              <div
-                v-for="row in infoRows"
-                :key="row.label"
-                class="product-details__meta-row"
-              >
-                <dt>{{ row.label }}</dt>
-                <dd>{{ row.value }}</dd>
-              </div>
-            </dl>
-          </section>
+          <ProductPurchasePanel
+            ref="purchasePanelRef"
+            :product="product"
+            :display-name="displayName"
+            :brand-or-category="brandOrCategory"
+            :selected-options="selectedOptions"
+            :has-variants="hasVariants"
+            :option-groups="optionGroups"
+            :active-variant="activeVariant"
+            :product-has-stock="productHasStock"
+            :can-purchase="canPurchase"
+            :show-notify-me="showNotifyMe"
+            :in-stock="inStock"
+            :max-quantity="maxQuantity"
+            :display-price="displayPrice"
+            :selection-hint="selectionHint"
+            :few-left="fewLeft"
+            :can-compare="canCompare"
+            :option-value-available="optionValueAvailable"
+            :option-swatch-hex="optionSwatchHex"
+            @select-option="selectOption"
+            @add-to-cart="onAddToCart"
+            @buy-now="onBuyNow"
+            @notify-me="onNotifyMe"
+            @open-compare="onOpenCompare"
+          />
         </div>
 
-        <section
-          v-if="reviews.length"
-          class="product-details__reviews"
-          aria-labelledby="reviews-heading"
-        >
-          <h2 id="reviews-heading" class="product-details__reviews-title">
-            Customer reviews
-          </h2>
-          <ul class="product-details__reviews-list">
-            <li
-              v-for="(review, index) in reviews"
-              :key="`${review.reviewerName}-${index}`"
-              class="product-details__review"
-            >
-              <div class="product-details__review-header">
-                <strong>{{ review.reviewerName || "Customer" }}</strong>
-                <span
-                  v-if="typeof review.rating === 'number'"
-                  class="product-details__review-rating"
-                >
-                  {{ review.rating.toFixed(1) }} ★
-                </span>
-              </div>
-              <p v-if="review.comment" class="product-details__review-comment">
-                {{ review.comment }}
-              </p>
-            </li>
-          </ul>
-        </section>
+        <ProductReviews :reviews="reviews" />
 
-        <!--
-          Compare — same category + all tags matched (any brand).
-          Only mounts when peers exist; current product stays highlighted in the table.
-        -->
         <ProductCompare
           v-if="canCompare && product"
           ref="productCompareRef"
@@ -1165,10 +487,6 @@ const breadcrumbItems = computed(() => {
           :candidates="comparableProducts"
         />
 
-        <!--
-          Similar products — same category (ranked by brand + tags).
-          Shared ProductCarousel with Recently viewed; View all opens listing.
-        -->
         <ProductCarousel
           v-if="similarPreview.length"
           title="Similar products"
@@ -1209,7 +527,6 @@ const breadcrumbItems = computed(() => {
           </li>
         </ProductCarousel>
 
-        <!-- Other products this shopper opened (excludes the current one). -->
         <RecentlyViewedProducts
           :exclude-id="product?.id"
           section-class="product-carousel--details"
@@ -1233,3 +550,7 @@ const breadcrumbItems = computed(() => {
     </div>
   </div>
 </template>
+
+<style>
+@import "@/assets/styles/components/product-details.css";
+</style>

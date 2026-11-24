@@ -1,16 +1,23 @@
 /**
- * useListingQuerySync — keep search / filters / sort / page in the URL.
+ * useListingQuerySync — keep search / filters / sort / page / category in the URL.
  *
  * Vue ideas:
- * - `useRoute` / `useRouter` — read & write `?q=&brand=&page=` query params
+ * - `useRoute` / `useRouter` — read & write path + `?q=&brand=&page=` query
+ * - Category is a path segment: `/gadgets` (not `?category=` or `/category/…`)
  * - `watch` — two-way sync (URL → state on load/back; state → URL on UI changes)
  * - `router.replace` — update the address bar without flooding browser history
  *
  * Example:
- *   /?q=phone&category=smartphones&brand=Apple&size=M&minPrice=50&maxPrice=200&sort=price-asc&page=2
+ *   /gadgets?q=phone&brand=Apple&size=M&minPrice=50&maxPrice=200&sort=price-asc&page=2
  */
 import { watch, nextTick, unref } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import {
+  categoryFromRoute,
+  isListingRouteName,
+  listingTo,
+} from "@/utils/listingRoutes.js";
+import { resolveStorefrontCategory } from "@/utils/categoryGroups.js";
 
 /**
  * @param {unknown} value
@@ -85,6 +92,29 @@ function queriesMatch(a, b) {
 }
 
 /**
+ * @param {{ name: string, params?: { category?: string }, query: Record<string, string> }} location
+ * @param {import('vue-router').RouteLocationNormalizedLoaded} route
+ */
+function locationsMatch(location, route) {
+  if (location.name !== route.name) return false;
+
+  const expectedCategory = resolveStorefrontCategory(
+    location.params?.category ?? "",
+  );
+  const routeCategory =
+    route.name === "products-category"
+      ? resolveStorefrontCategory(
+          Array.isArray(route.params.category)
+            ? route.params.category[0]
+            : (route.params.category ?? ""),
+        )
+      : "";
+  if (expectedCategory !== routeCategory) return false;
+
+  return queriesMatch(location.query, route.query);
+}
+
+/**
  * @param {object} options
  * @param {import('vue').Ref<string>} options.appliedQuery
  * @param {(next: string) => void} options.hydrateQuery
@@ -120,9 +150,8 @@ export function useListingQuerySync(options) {
     const search = String(appliedQuery.value ?? "").trim();
     if (search) q.q = search;
 
-    if (filters.categories.length > 0) {
-      q.category = filters.categories[0];
-    }
+    // Category is path-only (`/:category`) — never write `?category=`.
+
     if (filters.brands.length > 0) {
       q.brand = filters.brands.join(",");
     }
@@ -158,16 +187,25 @@ export function useListingQuerySync(options) {
     return q;
   }
 
+  function listingStateToLocation() {
+    return listingTo({
+      category: filters.categories[0] ?? "",
+      query: listingStateToQuery(),
+    });
+  }
+
   /**
-   * @param {import('vue-router').LocationQuery} routeQuery
+   * @param {import('vue-router').RouteLocationNormalizedLoaded} current
    */
-  async function applyQueryToState(routeQuery) {
+  async function applyRouteToState(current) {
     syncingFromUrl = true;
 
+    const routeQuery = current.query;
     const search = routeQuery.q != null ? String(routeQuery.q) : "";
     hydrateQuery(search);
 
-    filters.categories = parseList(routeQuery.category).slice(0, 1);
+    const category = categoryFromRoute(current);
+    filters.categories = category ? [category] : [];
     filters.brands = parseList(routeQuery.brand);
     filters.colors = parseList(routeQuery.color);
     filters.sizes = parseList(routeQuery.size);
@@ -217,23 +255,29 @@ export function useListingQuerySync(options) {
 
   // URL → state (initial load, back/forward, shared links)
   watch(
-    () => route.query,
-    (routeQuery) => {
+    () => ({
+      name: route.name,
+      category: categoryFromRoute(route),
+      query: route.query,
+    }),
+    () => {
+      if (!isListingRouteName(route.name)) return;
       if (syncingFromUrl) return;
-      if (queriesMatch(listingStateToQuery(), routeQuery)) return;
-      applyQueryToState(routeQuery);
+      if (locationsMatch(listingStateToLocation(), route)) return;
+      applyRouteToState(route);
     },
-    { immediate: true },
+    { immediate: true, deep: true },
   );
 
-  // State → URL (search after debounce, filter toggles, pagination)
+  // State → URL (search after debounce, filter toggles, pagination, category)
   watch(
-    () => JSON.stringify(listingStateToQuery()),
+    () => JSON.stringify(listingStateToLocation()),
     () => {
+      if (!isListingRouteName(route.name)) return;
       if (syncingFromUrl) return;
-      const nextQuery = listingStateToQuery();
-      if (queriesMatch(nextQuery, route.query)) return;
-      router.replace({ query: nextQuery });
+      const next = listingStateToLocation();
+      if (locationsMatch(next, route)) return;
+      router.replace(next);
     },
   );
 
@@ -244,6 +288,7 @@ export function useListingQuerySync(options) {
       return `${bounds.min}:${bounds.max}`;
     },
     () => {
+      if (!isListingRouteName(route.name)) return;
       const bounds = unref(priceBounds);
       if (bounds.max <= 0) return;
       if (!route.query.minPrice && !route.query.maxPrice) return;
@@ -270,6 +315,7 @@ export function useListingQuerySync(options) {
     watch(
       () => unref(total),
       async (count, prevCount) => {
+        if (!isListingRouteName(route.name)) return;
         if (prevCount !== 0 || count === 0) return;
 
         const pageNum = Number(route.query.page);

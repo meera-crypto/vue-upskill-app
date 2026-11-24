@@ -2,11 +2,11 @@
 /**
  * Header: logo | search | categories | home / favorites / cart / profile.
  *
- * Base (< md / 768px): logo; search under it; text-only categories; bottom nav.
- * md+: search in the bar; category icons above labels; inline icons.
+ * Base (< md / 768px): logo + search icon on one row; text-only categories; bottom nav.
+ * md+: search field in the bar; category icons above labels; inline icons.
  *
  * Search UI lives in ProductSearch (suggestions, keyboard nav).
- * Categories sit under search and sync via the listing URL (`?category=`).
+ * Categories sit under search and sync via `/:category` (slug only in the path).
  * Search and category combine with AND; no overlap → empty state (chip kept).
  * The category strip is always mounted (skeleton chips while the catalog
  * loads) so header height does not jump when real categories arrive.
@@ -50,6 +50,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   "update:searchQuery",
+  "submit-search",
   "clear-search",
   "toggle-category",
 ]);
@@ -141,8 +142,11 @@ function isCategorySelected(value) {
 /** True until the catalog-derived category list arrives. */
 const categoriesLoading = computed(() => props.categories.length === 0);
 
-/** Placeholder count while loading — enough to fill a typical viewport width. */
-const CATEGORY_SKELETON_COUNT = 8;
+/**
+ * Placeholder count while loading — enough chips to fill a typical desktop
+ * category row (storefront groups + leftovers) so height/width don’t jump.
+ */
+const CATEGORY_SKELETON_COUNT = 14;
 
 /**
  * When real categories replace skeletons, rebind scroll observers and
@@ -194,6 +198,7 @@ onUnmounted(() => {
           :search-query="searchQuery"
           :selected-category="selectedCategories[0] ?? ''"
           @update:search-query="emit('update:searchQuery', $event)"
+          @submit-search="emit('submit-search')"
           @clear-search="emit('clear-search')"
         />
 
@@ -275,7 +280,10 @@ onUnmounted(() => {
               :key="n"
               class="header-categories__item"
             >
-              <span class="header-category header-category--skeleton" />
+              <span class="header-category header-category--skeleton">
+                <span class="header-category__skeleton-icon" />
+                <span class="header-category__skeleton-label" />
+              </span>
             </li>
           </ul>
 

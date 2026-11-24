@@ -38,6 +38,7 @@
 }
 
 .product-card__media-link {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
@@ -61,7 +62,18 @@
   object-position: center;
   background-color: transparent;
   transform: scale(1);
-  transition: transform 0.35s ease;
+  transition:
+    transform 0.8s ease,
+    opacity 0.5s ease;
+}
+
+/* Next gallery image — stacked under/over primary; shown on hover when present */
+.product-card__image--hover {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Zoom the photo inside the clipped media frame (layout stays put).
@@ -72,126 +84,37 @@
   }
 }
 
-/*
- * Quick variants — sit over the bottom of the product image.
- * Hidden by default; revealed on hover/focus-within with the image zoom.
- * Mobile uses “View all” under the description instead.
- */
-.product-card__quick-variants {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  display: none;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.55rem 0.6rem 0.65rem;
-  background: color-mix(in srgb, var(--color-soft-white) 94%, transparent);
-  border-top: 1px solid var(--color-border);
-  pointer-events: none;
-}
-
-.product-card__quick-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  min-width: 0;
-}
-
-.product-card__quick-label {
-  margin: 0;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-.product-card__quick-value {
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--color-secondary);
-}
-
-.product-card__quick-value::before {
-  content: "· ";
-}
-
-.product-card__quick-values {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-
-.product-card__quick-option {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.65rem;
-  min-height: 1.65rem;
-  padding: 0.15rem 0.4rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.25rem;
-  background-color: var(--color-soft-white);
-  color: var(--color-secondary);
-  font: inherit;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.product-card__quick-option--swatch {
-  width: 1.65rem;
-  height: 1.65rem;
-  min-width: 1.65rem;
-  padding: 0.2rem;
-  border-radius: 999px;
-}
-
-.product-card__quick-option--selected {
-  border-color: var(--color-primary);
-  box-shadow: inset 0 0 0 1px var(--color-primary);
-}
-
-.product-card__quick-option--unavailable {
-  opacity: 0.4;
-}
-
-.product-card__quick-swatch {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  background-color: var(--swatch, #ccc);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 12%);
-}
-
-.product-card__quick-option:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
-  outline-offset: 1px;
-}
-
+/* Swap to the next gallery image on card hover (real hover pointers only). */
 @media (hover: hover) {
-  .product-card--has-variants:hover .product-card__quick-variants,
-  .product-card--has-variants:focus-within .product-card__quick-variants {
-    display: flex;
-    pointer-events: auto;
+  .product-card--hover-image:hover .product-card__image--primary {
+    opacity: 0;
+  }
+
+  .product-card--hover-image:hover .product-card__image--hover {
+    opacity: 1;
   }
 }
 
-/* Mobile “View all” — under description; hidden from md up (hover preview instead). */
-.product-card__view-all {
-  margin-top: 0.15rem;
-  font-size: 0.8125rem;
+@media (hover: hover) and (prefers-reduced-motion: reduce) {
+  .product-card__image {
+    transition: none;
+  }
 }
 
-.product-card__favorite {
+/* Favorite + Quick View — top-right stack over the image */
+.product-card__media-actions {
   position: absolute;
   top: 0.35rem;
   right: 0.35rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.product-card__favorite,
+.product-card__quick-view {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -207,9 +130,11 @@
   );
   color: var(--color-secondary);
   cursor: pointer;
+  text-decoration: none;
   transition:
     background-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .product-card__favorite:hover {
@@ -219,6 +144,42 @@
 
 .product-card__favorite--active {
   color: var(--color-favorite);
+}
+
+/* Favorites page: × dismiss control (always visible, not a heart). */
+.product-card__favorite--close {
+  background-color: var(--color-secondary);
+  color: var(--color-soft-white);
+}
+
+.product-card__favorite--close:hover,
+.product-card__favorite--close:focus-visible {
+  background-color: var(--color-secondary);
+  color: var(--color-soft-white);
+  opacity: 0.9;
+}
+
+.product-card__quick-view:hover,
+.product-card__quick-view:focus-visible {
+  background-color: var(--color-soft-white);
+  color: var(--color-primary);
+}
+
+/*
+ * Desktop (lg+) with fine hover: Quick View only on card hover / focus.
+ * Mobile + tablet (and coarse pointers): always visible under favorites.
+ */
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+  .product-card__quick-view {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .product-card:hover .product-card__quick-view,
+  .product-card:focus-within .product-card__quick-view {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .product-card__body {
@@ -390,31 +351,10 @@
     display: none;
   }
 
-  .product-card__view-all {
-    display: none;
-  }
-
   .product-card__media {
     flex: none;
     width: 100%;
     max-height: 14rem;
-  }
-
-  .product-card__quick-variants {
-    padding: 0.65rem 0.75rem 0.75rem;
-    gap: 0.5rem;
-  }
-
-  .product-card__quick-option {
-    min-width: 1.85rem;
-    min-height: 1.85rem;
-    font-size: 0.75rem;
-  }
-
-  .product-card__quick-option--swatch {
-    width: 1.85rem;
-    height: 1.85rem;
-    min-width: 1.85rem;
   }
 
   .product-card__image {
@@ -423,9 +363,14 @@
     min-height: 0;
   }
 
-  .product-card__favorite {
+  .product-card__media-actions {
     top: 0.65rem;
     right: 0.65rem;
+    gap: 0.4rem;
+  }
+
+  .product-card__favorite,
+  .product-card__quick-view {
     width: 2.25rem;
     height: 2.25rem;
   }

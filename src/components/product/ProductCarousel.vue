@@ -92,3 +92,7 @@ const nextLabel = computed(() => `Scroll ${props.listLabel} right`);
     </div>
   </section>
 </template>
+
+<style>
+@import "@/assets/styles/components/product-carousel.css";
+</style>

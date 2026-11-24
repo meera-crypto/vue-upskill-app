@@ -43,3 +43,7 @@ function continueShopping() {
     </div>
   </div>
 </template>
+
+<style>
+@import "@/assets/styles/components/404-page.css";
+</style>

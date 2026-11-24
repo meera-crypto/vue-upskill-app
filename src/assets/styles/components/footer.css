@@ -228,10 +228,11 @@
     font-size: var(--font-size-body);
   }
 
+  /* Tablet: brand on top; menus full width underneath */
   .footer-main {
-    grid-template-columns: minmax(10rem, 24rem) minmax(0, 1fr);
+    grid-template-columns: 1fr;
     align-items: start;
-    gap: 2rem 2.5rem;
+    gap: 2rem;
     padding-block: 2rem 1.5rem;
   }
 
@@ -247,6 +248,7 @@
   .footer-menus {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1.5rem 2.5rem;
+    width: 100%;
   }
 
   .footer-menu,
@@ -270,5 +272,13 @@
   .footer-menu__list {
     display: block;
     padding: 0;
+  }
+}
+
+/* Desktop: brand beside menus again */
+@media (min-width: 1024px) {
+  .footer-main {
+    grid-template-columns: minmax(10rem, 24rem) minmax(0, 1fr);
+    gap: 2rem 2.5rem;
   }
 }

@@ -65,3 +65,7 @@ function continueShopping() {
     </div>
   </div>
 </template>
+
+<style>
+@import "@/assets/styles/components/account-page.css";
+</style>

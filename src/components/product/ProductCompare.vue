@@ -13,7 +13,7 @@
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 import { RouterLink } from "vue-router";
 import { Columns2, X } from "@lucide/vue";
-import { PRODUCT_IMAGE_FALLBACK } from "@/services/productService.js";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
 import {
   COMPARE_MAX,
@@ -355,3 +355,7 @@ defineExpose({ openPanel, isOpen });
     </template>
   </section>
 </template>
+
+<style>
+@import "@/assets/styles/components/product-compare.css";
+</style>

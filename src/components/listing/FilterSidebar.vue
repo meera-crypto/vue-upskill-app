@@ -30,7 +30,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /** Catalog loading — show option-list skeletons instead of empty copy. */
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
+
+const FILTER_SKELETON_ROWS = 6;
+const FILTER_SKELETON_SWATCHES = 8;
+const FILTER_SKELETON_SIZES = 5;
 
 const emit = defineEmits([
   "toggle-brand",
@@ -171,6 +180,7 @@ function selectedCount(key) {
     class="filter-sidebar"
     :class="{ 'filter-sidebar--open': drawerOpen }"
     aria-label="Product filters"
+    :aria-busy="loading ? 'true' : undefined"
     :tabindex="drawerOpen ? -1 : undefined"
   >
     <div class="filter-sidebar__header">
@@ -304,7 +314,18 @@ function selectedCount(key) {
       :count="selectedCount('brand')"
       @toggle="toggleSection('brand')"
     >
-      <p v-if="options.brands.length === 0" class="filter-group__empty">
+      <ul
+        v-if="loading"
+        class="filter-group__list filter-skeleton-list"
+        aria-hidden="true"
+      >
+        <li
+          v-for="n in FILTER_SKELETON_ROWS"
+          :key="`brand-skel-${n}`"
+          class="filter-skeleton-list__row"
+        />
+      </ul>
+      <p v-else-if="options.brands.length === 0" class="filter-group__empty">
         No brands found
       </p>
       <ul v-else class="filter-group__list filter-group__list--scroll">
@@ -355,7 +376,18 @@ function selectedCount(key) {
       :count="selectedCount('color')"
       @toggle="toggleSection('color')"
     >
-      <p v-if="options.colors.length === 0" class="filter-group__empty">
+      <ul
+        v-if="loading"
+        class="filter-colors filter-skeleton-swatches"
+        aria-hidden="true"
+      >
+        <li
+          v-for="n in FILTER_SKELETON_SWATCHES"
+          :key="`color-skel-${n}`"
+          class="filter-skeleton-swatches__item"
+        />
+      </ul>
+      <p v-else-if="options.colors.length === 0" class="filter-group__empty">
         No colors found
       </p>
       <ul v-else class="filter-colors" role="list">
@@ -388,7 +420,21 @@ function selectedCount(key) {
       :count="selectedCount('size')"
       @toggle="toggleSection('size')"
     >
-      <p v-if="(options.sizes ?? []).length === 0" class="filter-group__empty">
+      <ul
+        v-if="loading"
+        class="filter-sizes filter-skeleton-sizes"
+        aria-hidden="true"
+      >
+        <li
+          v-for="n in FILTER_SKELETON_SIZES"
+          :key="`size-skel-${n}`"
+          class="filter-skeleton-sizes__item"
+        />
+      </ul>
+      <p
+        v-else-if="(options.sizes ?? []).length === 0"
+        class="filter-group__empty"
+      >
         No sizes found
       </p>
       <ul v-else class="filter-sizes" role="list">

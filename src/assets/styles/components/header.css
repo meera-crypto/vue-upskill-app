@@ -1,6 +1,6 @@
 /* Header — mobile-first (see breakpoints.css)
-   - base (< md)  mobile: logo + search under it; Favorites / Cart / Profile bottom bar
-   - md (768px)   tablet+: search centered; icons inline in the bar
+   - base (< md)  mobile: logo + search icon on one row; Favorites / Cart / Profile bottom bar
+   - md (768px)   tablet+: search field centered; icons inline in the bar
    - lg (1024px)  desktop+: roomier spacing
 */
 
@@ -36,16 +36,78 @@
   height: 2.75rem;
 }
 
-/* Mobile: full-width search on the row under the logo.
-   z-index keeps the suggestions panel above the category strip
-   (categories come later in the DOM and would otherwise intercept clicks). */
+/* Mobile: search icon on the logo row. Field is CSS-hidden until expanded
+   so first paint matches final layout (no JS/matchMedia height jump).
+   z-index keeps the suggestions panel above the category strip. */
 .header-search {
   position: relative;
   z-index: 2;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  width: auto;
+  order: 0;
+}
+
+.header-search__field {
+  display: none;
+}
+
+.header-search--expanded {
   flex: 1 1 100%;
   width: 100%;
   order: 3;
+  justify-content: stretch;
+}
+
+.header-search--expanded .header-search__toggle {
+  display: none;
+}
+
+.header-search--expanded .header-search__field {
+  display: flex;
+}
+
+.header-search__toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--color-secondary);
+  cursor: pointer;
+}
+
+.header-search__toggle:hover,
+.header-search__toggle:focus-visible {
+  color: var(--color-primary);
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.header-search__toggle:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.header-search__toggle--active {
+  color: var(--color-primary);
+}
+
+.header-search__toggle--active::after {
+  content: "";
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background-color: var(--color-primary);
 }
 
 .header-search__label {
@@ -62,8 +124,8 @@
 
 .header-search__field {
   position: relative;
-  display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .header-search__suggestions {
@@ -92,6 +154,15 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.header-search__no-results {
+  margin: 0;
+  padding: 0.85rem 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .header-search__suggestion {
@@ -268,6 +339,8 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: stretch;
+  justify-content: center;
+  justify-content: safe center;
   gap: 0.35rem;
   box-sizing: border-box;
   height: 100%;
@@ -401,12 +474,46 @@
     color 0.15s ease;
 }
 
-/* Loading placeholders — same outer size as real chips */
+/* Loading placeholders — match real chip height; vary widths to fill the row */
 .header-category--skeleton {
-  width: 5.5rem;
+  width: 4.75rem;
   pointer-events: none;
   cursor: default;
   border-color: transparent;
+  background-color: transparent;
+  gap: 0.35rem;
+}
+
+.header-categories__item:nth-child(3n) .header-category--skeleton {
+  width: 5.5rem;
+}
+
+.header-categories__item:nth-child(4n) .header-category--skeleton {
+  width: 6.25rem;
+}
+
+.header-categories__item:nth-child(5n) .header-category--skeleton {
+  width: 4rem;
+}
+
+.header-category__skeleton-icon {
+  display: none;
+  flex-shrink: 0;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 0.35rem;
+  background-color: color-mix(
+    in srgb,
+    var(--color-neutral) 28%,
+    var(--color-bg)
+  );
+}
+
+.header-category__skeleton-label {
+  display: block;
+  width: 100%;
+  height: 0.7rem;
+  border-radius: 999px;
   background-color: color-mix(
     in srgb,
     var(--color-neutral) 28%,
@@ -415,7 +522,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .header-category--skeleton {
+  .header-category__skeleton-icon,
+  .header-category__skeleton-label {
     background-image: linear-gradient(
       90deg,
       transparent 0%,
@@ -563,12 +671,24 @@ body {
     height: 3.25rem;
   }
 
-  .header-search {
+  .header-search,
+  .header-search--expanded {
     display: block;
     flex: 0 1 22rem;
     width: 100%;
     max-width: 22rem;
     order: 0;
+  }
+
+  .header-search__toggle,
+  .header-search--expanded .header-search__toggle,
+  .header-search__clear--mobile-close {
+    display: none;
+  }
+
+  .header-search__field,
+  .header-search--expanded .header-search__field {
+    display: flex;
   }
 
   .header-categories {
@@ -593,6 +713,11 @@ body {
 
   .header-category--skeleton {
     width: 4.75rem;
+    min-width: 4.75rem;
+  }
+
+  .header-category__skeleton-icon {
+    display: block;
   }
 
   .header-category__icon {

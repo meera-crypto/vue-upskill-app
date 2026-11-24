@@ -10,11 +10,14 @@
  * Vue idea: `computed` recalculates whenever the query, category, or catalog changes.
  */
 import { computed, toValue } from "vue";
-import { useProducts } from "@/composables/useProducts.js";
+import {
+  SEARCH_MIN_LENGTH,
+  useProducts,
+} from "@/composables/useProducts.js";
 import {
   matchingSearchMeta,
   productMatchesSearch,
-} from "@/services/productService.js";
+} from "@/utils/productSearch.js";
 
 const MAX_PRODUCTS = 8;
 
@@ -83,7 +86,8 @@ export function useSearchSuggestions(querySource, options = {}) {
 
     /** @type {Suggestion[]} */
     const items = [];
-    if (q.length < 1) return items;
+    // Same floor as listing search — avoid noisy dropdowns on 1–2 characters.
+    if (q.length < SEARCH_MIN_LENGTH) return items;
 
     const category = activeCategory.value;
 

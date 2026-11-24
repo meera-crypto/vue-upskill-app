@@ -7,45 +7,33 @@
  *
  * Images use <picture>: a <source> picks a smaller URL below md
  * (thumbnail on mobile; primary image as the <img> fallback for md+).
+ * When `product.images` has 2+, desktop hover shows the next gallery image
+ * (CSS opacity swap; touch / no-hover devices keep the primary).
  *
- * Qty +/- and Buy now live on the product detail page. Here, Add to cart
- * adds the item once; the CTA then switches to “Go to cart”.
- * Out of stock: full-width tertiary “See All Options” (opens details).
- * Image + body (brand/title/price/…) link to `/product?id=…&slug=…`;
- * cart / favorite buttons stay outside that link.
+ * Qty +/- and Buy now live on the product detail page. Here:
+ * - No variants: Add to cart once, then “Go to cart”.
+ * - Has variants: “Select option” opens the details page (options live there).
+ * - Out of stock (no variants): tertiary “See All Options” → details.
  *
- * Variants (when present):
- * - Desktop/hover: options strip over the image — select Color/Size here,
- *   then Add to cart (no details page required).
- * - Mobile: “View all” link under the description (`btn btn--link`).
+ * Favorites page: pass `favoriteAsClose` so the control is a × remove
+ * button (everything there is already saved). Elsewhere: heart toggle only.
  *
- * Vue ideas: `selectedOptions` ref + `computed` activeVariant (same pattern
- * as the details page); emit passes (product, variant) to the parent.
+ * Quick View (Eye) opens ProductQuickViewDialog for a preview (+ variants).
  */
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
-import { Heart, Star } from "@lucide/vue";
+import { Eye, Heart, Star, X } from "@lucide/vue";
 import {
-  COLOR_SWATCH_HEX,
   PRODUCT_IMAGE_FALLBACK,
   hasValidDiscount,
-} from "@/services/productService.js";
+} from "@/utils/productModel.js";
 import { mediaQueries } from "@/constants/breakpoints.js";
 import { productDetailsTo } from "@/utils/productRoutes.js";
 import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
-import { useCart } from "@/composables/useCart.js";
-import { useToast } from "@/composables/useToast.js";
-import {
-  cartLineKey,
-  findVariantByOptions,
-  isOptionValueAvailable,
-  isVariantSelectionComplete,
-  productHasVariants,
-  productOptions,
-} from "@/utils/variants.js";
+import { productHasVariants } from "@/utils/variants.js";
 import ProductPrice from "@/components/product/ProductPrice.vue";
 import ProductRating from "@/components/product/ProductRating.vue";
-import QuickViewModal from "@/components/product/QuickViewModal.vue";
+import ProductQuickViewDialog from "@/components/product/ProductQuickViewDialog.vue";
 
 const props = defineProps({
   product: {
@@ -53,6 +41,14 @@ const props = defineProps({
     required: true,
   },
   favorited: {
+    type: Boolean,
+    default: false,
+  },
+  /**
+   * Favorites page only: render × instead of the heart so remove reads
+   * as “close / dismiss” rather than another heart toggle.
+   */
+  favoriteAsClose: {
     type: Boolean,
     default: false,
   },
@@ -70,52 +66,14 @@ const emit = defineEmits([
   "see-all-options",
 ]);
 
-const toast = useToast();
-const { isInCart } = useCart();
+/** Eye button → ProductQuickViewDialog. */
+const quickViewOpen = ref(false);
 
-/**
- * Selected option map for quick view, e.g. `{ Color: "Blue", Size: "M" }`.
- * Replace the whole object on each click so Vue tracks the update.
- */
-const selectedOptions = ref(/** @type {Record<string, string>} */ ({}));
-
-watch(
-  () => props.product?.id,
-  () => {
-    selectedOptions.value = {};
-  },
-);
-
-/** True when this product has size/color (etc.) choices. */
+/** True when this product has size/color (etc.) choices — pick on details. */
 const hasVariants = computed(() => productHasVariants(props.product));
 
-/** Option groups for the hover quick-view strip. */
-const optionGroups = computed(() => productOptions(props.product));
-
-const selectionComplete = computed(() =>
-  isVariantSelectionComplete(props.product, selectedOptions.value),
-);
-
-const activeVariant = computed(() =>
-  findVariantByOptions(props.product, selectedOptions.value),
-);
-
-const missingOptionNames = computed(() => {
-  if (!hasVariants.value) return [];
-  return optionGroups.value
-    .filter((option) => !selectedOptions.value[option.name])
-    .map((option) => option.name);
-});
-
-/**
- * CTA “already in cart” — for variants, only the *selected* SKU counts,
- * so a second color/size can still be added as its own line.
- */
-const selectedInCart = computed(() => {
-  if (!hasVariants.value) return props.quantity > 0;
-  if (!activeVariant.value) return false;
-  return isInCart(cartLineKey(props.product, activeVariant.value));
-});
+/** Simple products already in the bag show “Go to cart”. */
+const inCart = computed(() => props.quantity > 0);
 
 const displayName = computed(
   () => props.product.title || props.product.name || "Untitled product",
@@ -148,10 +106,7 @@ const description = computed(() => {
 const inStock = computed(() => (props.product.stock ?? 0) > 0);
 
 /** Strike-through + % off only for a valid discount (never misleading). */
-const showDiscount = computed(() => {
-  if (activeVariant.value) return false;
-  return hasValidDiscount(props.product);
-});
+const showDiscount = computed(() => hasValidDiscount(props.product));
 
 /** Low stock hint only — never show the exact count. */
 const fewLeft = computed(
@@ -182,18 +137,37 @@ const ratingLabel = computed(() => {
   return `${score} out of 5 stars`;
 });
 
-/** Prefer the selected variant’s image when the overlay mapped one. */
-const displayImage = computed(() => {
-  const variantImage =
-    typeof activeVariant.value?.image === "string"
-      ? activeVariant.value.image.trim()
-      : "";
-  return variantImage || props.product.image;
+const displayImage = computed(() => props.product.image);
+
+/** Deduped gallery URLs from the product (primary first when present). */
+const galleryImages = computed(() => {
+  const raw = Array.isArray(props.product.images) ? props.product.images : [];
+  /** @type {string[]} */
+  const list = [];
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const url = entry.trim();
+    if (url && !list.includes(url)) list.push(url);
+  }
+  const primary =
+    typeof props.product.image === "string" ? props.product.image.trim() : "";
+  if (primary && !list.includes(primary)) list.unshift(primary);
+  return list;
 });
+
+/** Next gallery image for card hover (skipped when there is only one photo). */
+const hoverGalleryImage = computed(() => {
+  const images = galleryImages.value;
+  if (images.length < 2) return "";
+  const primary = String(displayImage.value ?? "").trim();
+  const next = images.find((url) => url !== primary) ?? images[1];
+  return next && next !== primary ? next : "";
+});
+
+const hasHoverImage = computed(() => Boolean(hoverGalleryImage.value));
 
 /** Image URL for narrow screens — thumbnail when the API gave a distinct one. */
 const mobileImageSrc = computed(() => {
-  if (activeVariant.value?.image) return displayImage.value;
   const thumb =
     typeof props.product.thumbnail === "string"
       ? props.product.thumbnail.trim()
@@ -201,15 +175,10 @@ const mobileImageSrc = computed(() => {
   return thumb || props.product.image;
 });
 
-const displayPrice = computed(() => {
-  if (
-    activeVariant.value &&
-    Number.isFinite(Number(activeVariant.value.price))
-  ) {
-    return Number(activeVariant.value.price);
-  }
-  return Number(props.product.price) || 0;
-});
+const displayPrice = computed(() => Number(props.product.price) || 0);
+
+/** Details route — options are chosen on the PDP, not on the card. */
+const detailsTo = computed(() => productDetailsTo(props.product));
 
 function onImageError(event) {
   if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
@@ -217,68 +186,17 @@ function onImageError(event) {
   }
 }
 
-/**
- * @param {string} optionName
- * @param {string} optionValue
- */
-function selectOption(optionName, optionValue) {
-  selectedOptions.value = {
-    ...selectedOptions.value,
-    [optionName]: optionValue,
-  };
-}
-
-/**
- * @param {string} optionName
- * @param {string} optionValue
- */
-function optionValueAvailable(optionName, optionValue) {
-  return isOptionValueAvailable(
-    props.product,
-    optionName,
-    optionValue,
-    selectedOptions.value,
-  );
-}
-
-/**
- * Color options get a swatch when we know a hex; other groups use text chips.
- * @param {string} optionName
- * @param {string} optionValue
- */
-function optionSwatchHex(optionName, optionValue) {
-  if (String(optionName).toLowerCase() !== "color") return "";
-  const key = String(optionValue).trim().toLowerCase();
-  return COLOR_SWATCH_HEX[key] || "";
-}
-
 function onAddToCart() {
-  if (!inStock.value) return;
-
-  if (hasVariants.value) {
-    if (!selectionComplete.value) {
-      const missing = missingOptionNames.value.join(" and ");
-      toast.info(missing ? `Select ${missing}` : "Select product options");
-      return;
-    }
-    if (!activeVariant.value || (activeVariant.value.stock ?? 0) <= 0) {
-      toast.info("This combination is unavailable");
-      return;
-    }
-    emit("add-to-cart", props.product, activeVariant.value);
-    return;
-  }
-
+  if (!inStock.value || hasVariants.value) return;
   emit("add-to-cart", props.product);
 }
 
-/** Primary CTA after add — parent can navigate once a cart route exists. */
 function onGoToCart(product) {
   emit("go-to-cart", product);
 }
 
 function onCartCta(product) {
-  if (selectedInCart.value) {
+  if (inCart.value) {
     onGoToCart(product);
   } else {
     onAddToCart();
@@ -289,26 +207,24 @@ function onToggleFavorite(product) {
   emit("toggle-favorite", product);
 }
 
-/** Opens the product details page (used for out-of-stock CTA / View all). */
+/** Variant CTA + out-of-stock CTA → product details. */
 function onSeeAllOptions(product) {
   emit("see-all-options", product);
 }
 
-/**
- * Details link includes current quick-view picks as `opts` / `variant`
- * query params so the PDP opens with the same selection.
- */
-const detailsTo = computed(() =>
-  productDetailsTo(props.product, {
-    selectedOptions: selectedOptions.value,
-  }),
-);
+function openQuickView() {
+  quickViewOpen.value = true;
+}
+
+function onQuickViewAddToCart(product, variant = null) {
+  emit("add-to-cart", product, variant);
+}
 </script>
 
 <template>
   <article
     class="product-card"
-    :class="{ 'product-card--has-variants': hasVariants }"
+    :class="{ 'product-card--hover-image': hasHoverImage }"
   >
     <div class="product-card__main">
       <div class="product-card__media">
@@ -321,7 +237,7 @@ const detailsTo = computed(() =>
             <!-- untilMd: smaller file below the md layout step. -->
             <source :media="mediaQueries.untilMd" :srcset="mobileImageSrc" />
             <img
-              class="product-card__image"
+              class="product-card__image product-card__image--primary"
               :src="displayImage"
               :alt="displayName"
               width="150"
@@ -330,30 +246,64 @@ const detailsTo = computed(() =>
               @error="onImageError"
             />
           </picture>
+          <!-- Preloaded next gallery shot; revealed on hover (CSS). -->
+          <img
+            v-if="hasHoverImage"
+            class="product-card__image product-card__image--hover"
+            :src="hoverGalleryImage"
+            alt=""
+            width="150"
+            height="150"
+            loading="lazy"
+            decoding="async"
+            aria-hidden="true"
+            @error="onImageError"
+          />
         </RouterLink>
-        <button
-          type="button"
-          class="product-card__favorite"
-          :class="{ 'product-card__favorite--active': favorited }"
-          :aria-label="favorited ? 'Remove from favorites' : 'Add to favorites'"
-          :aria-pressed="favorited"
-          @click="onToggleFavorite(product)"
-        >
-          <Heart :size="16" :fill="favorited ? 'currentColor' : 'none'" />
-        </button>
-
-        <!--
-          Quick variant selection — over the image bottom on card hover.
-          Pick options here, then use Add to cart (no details page needed).
-        -->
-        <QuickViewModal
-          v-if="hasVariants"
-          :option-groups="optionGroups"
-          :selected-options="selectedOptions"
-          :swatch-hex-for="optionSwatchHex"
-          :is-available="optionValueAvailable"
-          @select="selectOption"
-        />
+        <!-- Favorite + Quick View stacked over the image (outside the media link). -->
+        <div class="product-card__media-actions">
+          <button
+            type="button"
+            class="product-card__favorite"
+            :class="{
+              'product-card__favorite--active': favorited && !favoriteAsClose,
+              'product-card__favorite--close': favoriteAsClose,
+            }"
+            :aria-label="
+              favoriteAsClose || favorited
+                ? 'Remove from favorites'
+                : 'Add to favorites'
+            "
+            :aria-pressed="favorited"
+            @click="onToggleFavorite(product)"
+          >
+            <X
+              v-if="favoriteAsClose"
+              class="product-card__favorite-icon product-card__favorite-icon--close"
+              :size="16"
+              aria-hidden="true"
+            />
+            <Heart
+              v-else
+              class="product-card__favorite-icon product-card__favorite-icon--heart"
+              :size="16"
+              :fill="favorited ? 'currentColor' : 'none'"
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            class="product-card__quick-view"
+            :aria-label="`Quick view ${displayName}`"
+            @click="openQuickView"
+          >
+            <Eye
+              class="product-card__quick-view-icon"
+              :size="16"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
       </div>
 
       <div class="product-card__body">
@@ -380,15 +330,6 @@ const detailsTo = computed(() =>
           <p v-if="description" class="product-card__description">
             {{ description }}
           </p>
-        </RouterLink>
-
-        <!-- Mobile: below description — opens details to choose all options -->
-        <RouterLink
-          v-if="hasVariants"
-          :to="detailsTo"
-          class="btn btn--link product-card__view-all"
-        >
-          View all
         </RouterLink>
 
         <RouterLink
@@ -421,15 +362,24 @@ const detailsTo = computed(() =>
           />
         </RouterLink>
 
-        <!-- Outside the body link so cart clicks don’t navigate away -->
+        <!-- Outside the body link so cart / remove clicks don’t navigate away -->
         <div class="product-card__actions">
-          <template v-if="inStock">
+          <button
+            v-if="hasVariants"
+            type="button"
+            class="btn btn--primary product-card__cart"
+            @click="onSeeAllOptions(product)"
+          >
+            Select option
+          </button>
+
+          <template v-else-if="inStock">
             <button
               type="button"
               class="btn btn--primary product-card__cart"
               @click="onCartCta(product)"
             >
-              {{ selectedInCart ? "Go to cart" : "Add to cart" }}
+              {{ inCart ? "Go to cart" : "Add to cart" }}
             </button>
           </template>
 
@@ -444,5 +394,18 @@ const detailsTo = computed(() =>
         </div>
       </div>
     </div>
+
+    <ProductQuickViewDialog
+      v-model:open="quickViewOpen"
+      :product="product"
+      :favorited="favorited"
+      @add-to-cart="onQuickViewAddToCart"
+      @go-to-cart="emit('go-to-cart', $event)"
+      @toggle-favorite="emit('toggle-favorite', $event)"
+    />
   </article>
 </template>
+
+<style>
+@import "@/assets/styles/components/product-card.css";
+</style>

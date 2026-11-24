@@ -1,7 +1,7 @@
-/* Hero — category title banner (tablet+ only; hidden on mobile) */
+/* Hero — home page banner (all breakpoints) */
 
 .hero {
-  display: none;
+  display: block;
   background: linear-gradient(
     135deg,
     var(--color-cool-blue) 0%,
@@ -12,16 +12,19 @@
 }
 
 .hero__inner {
-  padding-block: 2.5rem 2.75rem;
+  padding-block: 1.75rem 2rem;
 }
 
 .hero__title {
   margin: 0 0 0.75rem;
   color: var(--color-secondary);
+  font-size: var(--font-size-h3);
+  line-height: var(--line-height-h3);
 }
 
 .hero__description {
-  margin: 0 0 1.5rem;
+  margin: 0 0 1.25rem;
+  font-size: var(--font-size-sm);
   color: color-mix(in srgb, var(--color-secondary) 72%, var(--color-neutral));
 }
 
@@ -29,13 +32,193 @@
   display: inline-flex;
 }
 
-/* md (768px) — tablet+: show hero banner */
-@media (min-width: 768px) {
-  .hero {
-    display: block;
-  }
+/* Primary promo strip — below hero copy; category left, product right */
+.hero-banner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem 1.15rem;
+  background-color: var(--color-primary);
+  border-radius: 1rem;
+  color: var(--color-soft-white);
+  transition: background-color 0.15s ease;
+}
 
+.hero-banner:has(.hero-banner__category-link:hover),
+.hero-banner:has(.hero-banner__category-link:focus-visible) {
+  background-color: var(--color-primary-hover);
+}
+
+/* Covers the whole banner; product link sits above so it stays clickable. */
+.hero-banner__category-link {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.hero-banner__category-link:focus-visible {
+  outline: 2px solid var(--color-soft-white);
+  outline-offset: 2px;
+}
+
+.hero-banner__copy {
+  position: relative;
+  z-index: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  pointer-events: none;
+}
+
+.hero-banner__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-soft-white) 78%, transparent);
+}
+
+.hero-banner__category {
+  margin: 0 0 0.5rem;
+  font-size: var(--font-size-h4);
+  font-weight: 700;
+  line-height: var(--line-height-h4);
+  color: var(--color-soft-white);
+}
+
+.hero-banner__description {
+  margin: 0 0 0.75rem;
+  max-width: 36rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--color-soft-white) 86%, transparent);
+}
+
+.hero-banner__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hero-banner__tag {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--color-soft-white) 35%, transparent);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-primary);
+  background-color: var(--color-soft-white);
+  text-transform: capitalize;
+}
+
+.hero-banner__product {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex: 0 1 auto;
+  max-width: none;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.75rem;
+  background-color: color-mix(
+    in srgb,
+    var(--color-soft-white) 14%,
+    transparent
+  );
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.hero-banner__product:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--color-soft-white) 22%,
+    transparent
+  );
+}
+
+.hero-banner__product:focus-visible {
+  outline: 2px solid var(--color-soft-white);
+  outline-offset: 2px;
+}
+
+.hero-banner__product-image {
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border-radius: 0.5rem;
+  background-color: var(--color-soft-white);
+}
+
+.hero-banner__product-meta {
+  min-width: 0;
+}
+
+.hero-banner__product-brand {
+  margin: 0 0 0.15rem;
+  font-size: var(--font-size-sm);
+  color: color-mix(in srgb, var(--color-soft-white) 78%, transparent);
+}
+
+.hero-banner__product-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-soft-white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-banner__product-price {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-soft-white);
+}
+
+/* md (768px) — tablet+: larger type + side-by-side promo */
+@media (min-width: 768px) {
   .hero__inner {
     padding-block: 3.5rem 4rem;
+  }
+
+  .hero__title {
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-h1);
+  }
+
+  .hero__description {
+    margin: 0 0 1.5rem;
+    font-size: inherit;
+  }
+
+  .hero-banner {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .hero-banner__tags {
+    margin: 0 0 1rem;
+  }
+
+  .hero-banner__product {
+    flex: 0 1 18rem;
+    max-width: 18rem;
   }
 }
