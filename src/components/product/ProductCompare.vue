@@ -302,7 +302,7 @@ defineExpose({ openPanel, isOpen });
                     :aria-label="`Remove ${column.title || column.name} from comparison`"
                     @click="togglePeer(column)"
                   >
-                    <X :size="16" aria-hidden="true" />
+                    <X :size="20" aria-hidden="true" />
                   </button>
                   <img
                     class="product-compare__col-image"

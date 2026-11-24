@@ -43,7 +43,7 @@ const emit = defineEmits(["prev", "next", "go-to-page"]);
         aria-label="Previous page"
         @click="emit('prev')"
       >
-        <ChevronLeft :size="18" aria-hidden="true" />
+        <ChevronLeft :size="22" aria-hidden="true" />
         <span class="pagination__nav-label">Prev</span>
       </button>
 
@@ -77,7 +77,7 @@ const emit = defineEmits(["prev", "next", "go-to-page"]);
         @click="emit('next')"
       >
         <span class="pagination__nav-label">Next</span>
-        <ChevronRight :size="18" aria-hidden="true" />
+        <ChevronRight :size="22" aria-hidden="true" />
       </button>
     </div>
   </nav>

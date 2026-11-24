@@ -77,7 +77,7 @@ const nextLabel = computed(() => `Scroll ${props.listLabel} right`);
         :aria-label="prevLabel"
         @click="scrollByDirection(-1)"
       >
-        <ChevronLeft :size="20" aria-hidden="true" />
+        <ChevronLeft :size="24" aria-hidden="true" />
       </button>
 
       <button
@@ -87,7 +87,7 @@ const nextLabel = computed(() => `Scroll ${props.listLabel} right`);
         :aria-label="nextLabel"
         @click="scrollByDirection(1)"
       >
-        <ChevronRight :size="20" aria-hidden="true" />
+        <ChevronRight :size="24" aria-hidden="true" />
       </button>
     </div>
   </section>

@@ -353,7 +353,7 @@ onUnmounted(() => {
       aria-label="Open search"
       @click="openMobileSearch"
     >
-      <Search :size="22" aria-hidden="true" />
+      <Search :size="24" aria-hidden="true" />
     </button>
 
     <label class="header-search__label" for="header-search-input">
@@ -387,7 +387,7 @@ onUnmounted(() => {
         @mousedown.prevent
         @click="clearSearch"
       >
-        <X :size="16" />
+        <X :size="20" />
       </button>
       <button
         v-else-if="mobileSearchOpen"
@@ -397,7 +397,7 @@ onUnmounted(() => {
         @mousedown.prevent
         @click="closeMobileSearch"
       >
-        <X :size="16" />
+        <X :size="20" />
       </button>
 
       <div

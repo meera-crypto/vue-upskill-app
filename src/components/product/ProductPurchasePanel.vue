@@ -401,7 +401,7 @@ function onBuyOrNotify() {
               aria-label="Decrease quantity"
               @click="decreaseQty"
             >
-              <Minus :size="16" aria-hidden="true" />
+              <Minus :size="20" aria-hidden="true" />
             </button>
             <input
               id="product-qty"
@@ -423,7 +423,7 @@ function onBuyOrNotify() {
               aria-label="Increase quantity"
               @click="increaseQty"
             >
-              <Plus :size="16" aria-hidden="true" />
+              <Plus :size="20" aria-hidden="true" />
             </button>
           </div>
         </div>

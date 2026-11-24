@@ -210,7 +210,7 @@ onUnmounted(() => {
                 class="nav-icon"
                 aria-label="Home"
               >
-                <Home :size="22" />
+                <Home :size="24" />
                 <span class="nav-label">Home</span>
               </RouterLink>
               <RouterLink
@@ -218,7 +218,7 @@ onUnmounted(() => {
                 class="nav-icon"
                 aria-label="Favorites"
               >
-                <Heart :size="22" />
+                <Heart :size="24" />
                 <span class="nav-label">Favorites</span>
                 <span
                   v-if="favoriteCount > 0"
@@ -234,7 +234,7 @@ onUnmounted(() => {
                 class="nav-icon"
                 aria-label="Profile"
               >
-                <User :size="22" />
+                <User :size="24" />
                 <span class="nav-label">Profile</span>
               </RouterLink>
             </div>
@@ -267,7 +267,7 @@ onUnmounted(() => {
             aria-label="Scroll categories left"
             @click="scrollCategories(-1)"
           >
-            <ChevronLeft :size="20" aria-hidden="true" />
+            <ChevronLeft :size="22" aria-hidden="true" />
           </button>
 
           <ul
@@ -320,7 +320,7 @@ onUnmounted(() => {
             aria-label="Scroll categories right"
             @click="scrollCategories(1)"
           >
-            <ChevronRight :size="20" aria-hidden="true" />
+            <ChevronRight :size="22" aria-hidden="true" />
           </button>
         </div>
       </div>

@@ -324,7 +324,7 @@ function onViewDetails() {
           aria-label="Close quick view"
           @click="close"
         >
-          <X :size="18" aria-hidden="true" />
+          <X :size="22" aria-hidden="true" />
         </button>
 
         <div class="quick-view__main">
@@ -345,7 +345,7 @@ function onViewDetails() {
                 aria-label="Previous image"
                 @click="goToPrevImage"
               >
-                <ChevronLeft :size="20" aria-hidden="true" />
+                <ChevronLeft :size="24" aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -354,7 +354,7 @@ function onViewDetails() {
                 aria-label="Next image"
                 @click="goToNextImage"
               >
-                <ChevronRight :size="20" aria-hidden="true" />
+                <ChevronRight :size="24" aria-hidden="true" />
               </button>
             </template>
           </div>
@@ -382,7 +382,7 @@ function onViewDetails() {
                 @click="onToggleFavorite"
               >
                 <Heart
-                  :size="16"
+                  :size="20"
                   :fill="favorited ? 'currentColor' : 'none'"
                   aria-hidden="true"
                 />

@@ -156,7 +156,7 @@ function lineMax(product) {
                     :disabled="line.quantity <= 0"
                     @click="decrement(line.key)"
                   >
-                    <Minus :size="16" aria-hidden="true" />
+                    <Minus :size="20" aria-hidden="true" />
                   </button>
                   <span class="cart-line__qty-value" aria-live="polite">
                     {{ line.quantity }}
@@ -168,7 +168,7 @@ function lineMax(product) {
                     :disabled="line.quantity >= lineMax(line.product)"
                     @click="increment(line.key)"
                   >
-                    <Plus :size="16" aria-hidden="true" />
+                    <Plus :size="20" aria-hidden="true" />
                   </button>
                 </div>
 
@@ -182,7 +182,7 @@ function lineMax(product) {
                   :aria-label="`Remove ${productLabel(line.product)}`"
                   @click="onRemove(line)"
                 >
-                  <Trash2 :size="18" aria-hidden="true" />
+                  <Trash2 :size="20" aria-hidden="true" />
                   <span>Remove</span>
                 </button>
               </div>

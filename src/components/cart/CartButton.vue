@@ -13,7 +13,7 @@ const { cartCount } = useCart();
 
 <template>
   <RouterLink :to="{ name: 'cart' }" class="nav-icon" aria-label="Cart">
-    <ShoppingCart :size="22" />
+    <ShoppingCart :size="24" />
     <span class="nav-label">Cart</span>
     <span v-if="cartCount > 0" class="nav-badge" aria-hidden="true">
       {{ cartCount }}

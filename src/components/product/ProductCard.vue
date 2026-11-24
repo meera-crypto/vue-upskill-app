@@ -280,13 +280,13 @@ function onQuickViewAddToCart(product, variant = null) {
             <X
               v-if="favoriteAsClose"
               class="product-card__favorite-icon product-card__favorite-icon--close"
-              :size="16"
+              :size="20"
               aria-hidden="true"
             />
             <Heart
               v-else
               class="product-card__favorite-icon product-card__favorite-icon--heart"
-              :size="16"
+              :size="20"
               :fill="favorited ? 'currentColor' : 'none'"
               aria-hidden="true"
             />
@@ -299,7 +299,7 @@ function onQuickViewAddToCart(product, variant = null) {
           >
             <Eye
               class="product-card__quick-view-icon"
-              :size="16"
+              :size="20"
               aria-hidden="true"
             />
           </button>

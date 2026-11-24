@@ -144,15 +144,8 @@ export function buildActiveChips({
   /** @type {{ id: string, group: string, value: string|number, label: string }[]} */
   const chips = [];
 
-  for (const value of filters.categories) {
-    const opt = filterOptions.categories.find((c) => c.value === value);
-    chips.push({
-      id: `category:${value}`,
-      group: "categories",
-      value,
-      label: opt?.label ?? value,
-    });
-  }
+  // Category is path/header-strip only — not an active filter chip.
+  // Clear it via the header category control, not this row.
 
   for (const value of filters.brands) {
     chips.push({

@@ -13,7 +13,7 @@
 .category-banner__inner {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--gap-16);
   padding-block: 1rem 1.25rem;
 }
 
@@ -55,7 +55,7 @@
 .category-banner__tags {
   display: none;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: var(--gap-8);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -64,7 +64,7 @@
 .category-banner__tag {
   padding: 0.25rem 0.6rem;
   border: 1px solid var(--color-border);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-4);
   font-size: 0.75rem;
   line-height: 1.3;
   color: var(--color-primary);
@@ -76,7 +76,7 @@
   max-width: 18rem;
   min-width: 0;
   padding: 1rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-20);
   background-color: var(--color-primary);
   color: var(--color-soft-white);
 }
@@ -84,7 +84,7 @@
 .category-banner__product {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
+  gap: var(--gap-16);
   min-width: 0;
   color: inherit;
   text-decoration: none;
@@ -93,7 +93,7 @@
 .category-banner__product:focus-visible {
   outline: 2px solid var(--color-soft-white);
   outline-offset: 3px;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-12);
 }
 
 .category-banner__product-image {
@@ -101,7 +101,7 @@
   width: 4.5rem;
   height: 4.5rem;
   object-fit: cover;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-12);
   background-color: var(--color-soft-white);
 }
 
@@ -141,8 +141,8 @@
       "crumbs crumbs"
       "intro promo";
     align-items: center;
-    column-gap: 2rem;
-    row-gap: 1.25rem;
+    column-gap: var(--gap-40);
+    row-gap: var(--gap-24);
     padding-block: 1.25rem 3.25rem;
   }
 

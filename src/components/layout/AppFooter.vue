@@ -274,13 +274,13 @@ onUnmounted(() => {
               <Minus
                 v-if="isMenuOpen(column.id)"
                 class="footer-menu__icon"
-                :size="18"
+                :size="20"
                 aria-hidden="true"
               />
               <Plus
                 v-else
                 class="footer-menu__icon"
-                :size="18"
+                :size="20"
                 aria-hidden="true"
               />
             </button>

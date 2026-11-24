@@ -175,7 +175,7 @@ function onPriceMax(value) {
           aria-controls="product-filters"
           @click="openFilters"
         >
-          <SlidersHorizontal :size="20" aria-hidden="true" />
+          <SlidersHorizontal :size="22" aria-hidden="true" />
           <span class="product-list__filters-label">Filters</span>
           <span
             v-if="listing.hasActiveFilters"
