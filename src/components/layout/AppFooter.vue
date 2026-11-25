@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Footer layout:
  * 1. Trust strip — four feature cards from a data array (v-for + dynamic icon).
@@ -12,7 +12,7 @@
  * reactive object: openMenus[id] === true means that section is expanded.
  * Tablet+ CSS always shows the lists; isMdUp keeps aria-expanded in sync.
  *
- * currentYear is computed once in <script setup> and shown with {{ }}.
+ * currentYear is computed once in <script setup lang="ts"> and shown with {{ }}.
  */
 import { onMounted, onUnmounted, reactive, ref } from "vue";
 import { RouterLink } from "vue-router";
@@ -24,7 +24,7 @@ import {
   Plus,
   Minus,
 } from "@lucide/vue";
-import { mediaQueries } from "@/constants/breakpoints.js";
+import { mediaQueries } from "@/constants/breakpoints";
 import logoUrl from "@/assets/images/logo.png";
 
 const currentYear = new Date().getFullYear();
@@ -94,24 +94,23 @@ const menuColumns = [
 ];
 
 /** Which accordion sections are open on mobile (all start collapsed). */
-const openMenus = reactive(
+const openMenus = reactive<Record<string, boolean>>(
   Object.fromEntries(menuColumns.map((column) => [column.id, false])),
 );
 
 /** true from md up — menus stay expanded; toggle is decorative only. */
 const isMdUp = ref(false);
-/** @type {MediaQueryList | null} */
-let mdUpQuery = null;
+let mdUpQuery: MediaQueryList | null = null;
 
 function syncMdUp() {
   isMdUp.value = Boolean(mdUpQuery?.matches);
 }
 
-function isMenuOpen(id) {
+function isMenuOpen(id: string) {
   return isMdUp.value || Boolean(openMenus[id]);
 }
 
-function toggleMenu(id) {
+function toggleMenu(id: string) {
   if (isMdUp.value) return;
   openMenus[id] = !openMenus[id];
 }

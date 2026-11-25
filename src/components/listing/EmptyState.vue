@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * EmptyState — shared message + actions for empty / error / not-found UI.
  *
@@ -20,7 +20,7 @@ defineProps({
   variant: {
     type: String,
     default: "default",
-    validator: (value) => ["default", "error", "not-found"].includes(value),
+    validator: (value: string) => ["default", "error", "not-found"].includes(value),
   },
 });
 </script>

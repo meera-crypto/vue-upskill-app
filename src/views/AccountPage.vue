@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Account page — guest placeholder for Profile / Your Account links.
  *

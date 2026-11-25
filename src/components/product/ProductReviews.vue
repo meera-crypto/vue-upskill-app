@@ -1,10 +1,13 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ProductReviews — customer review list for the details page.
  */
+import type { PropType } from "vue";
+import type { ProductReview } from "@/types/product";
+
 defineProps({
   reviews: {
-    type: Array,
+    type: Array as PropType<ProductReview[]>,
     default: () => [],
   },
 });

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Product details — one product at `/:category/:slug` (e.g. `/gadgets/iphone-x`).
  *
@@ -9,6 +9,8 @@
  */
 import { computed, useTemplateRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import type { BreadcrumbItem } from "@/types/ui";
+import type { Product, ProductVariant } from "@/types/product";
 import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
 import EmptyState from "@/components/listing/EmptyState.vue";
 import ProductCard from "@/components/product/ProductCard.vue";
@@ -18,23 +20,23 @@ import ProductGallery from "@/components/product/ProductGallery.vue";
 import ProductPurchasePanel from "@/components/product/ProductPurchasePanel.vue";
 import ProductReviews from "@/components/product/ProductReviews.vue";
 import RecentlyViewedProducts from "@/components/product/RecentlyViewedProducts.vue";
-import { useProductDetail } from "@/composables/useProductDetail.js";
-import { useProducts } from "@/composables/useProducts.js";
-import { useCart } from "@/composables/useCart.js";
-import { useWishlist } from "@/composables/useWishlist.js";
-import { useRecentlyViewed } from "@/composables/useRecentlyViewed.js";
-import { useToast } from "@/composables/useToast.js";
-import { useVariantSelection } from "@/composables/useVariantSelection.js";
+import { useProductDetail } from "@/composables/useProductDetail";
+import { useProducts } from "@/composables/useProducts";
+import { useCart } from "@/composables/useCart";
+import { useWishlist } from "@/composables/useWishlist";
+import { useRecentlyViewed } from "@/composables/useRecentlyViewed";
+import { useToast } from "@/composables/useToast";
+import { useVariantSelection } from "@/composables/useVariantSelection";
 import {
   productDetailsTo,
   selectedOptionsFromNavigation,
-} from "@/utils/productRoutes.js";
-import { resolveStorefrontCategory } from "@/utils/categoryGroups.js";
-import { getComparableProducts } from "@/utils/compareProducts.js";
+} from "@/utils/productRoutes";
+import { resolveStorefrontCategory } from "@/utils/categoryGroups";
+import { getComparableProducts } from "@/utils/compareProducts";
 import {
   getSimilarProducts,
   similarProductsListingTo,
-} from "@/utils/similarProducts.js";
+} from "@/utils/similarProducts";
 
 /** Max cards in the horizontal similar row before “View all”. */
 const SIMILAR_PREVIEW_LIMIT = 8;
@@ -231,10 +233,7 @@ watch(
   { deep: true },
 );
 
-/**
- * @param {number | null} qty
- */
-function resolveQtyOrToast(qty) {
+function resolveQtyOrToast(qty: number | null) {
   if (qty == null) {
     toast.info("Enter a quantity of 1 or more");
     return null;
@@ -242,7 +241,7 @@ function resolveQtyOrToast(qty) {
   return qty;
 }
 
-function onAddToCart(qtyFromPanel) {
+function onAddToCart(qtyFromPanel: number | null) {
   if (!product.value || !productHasStock.value) return;
   const ready = ensureVariantReady();
   if (!ready.ok) {
@@ -277,7 +276,7 @@ function onAddToCart(qtyFromPanel) {
   toast.error(`Couldn't add ${displayName.value} to cart`);
 }
 
-function onBuyNow(qtyFromPanel) {
+function onBuyNow(qtyFromPanel: number | null) {
   if (!product.value || !productHasStock.value) return;
   const ready = ensureVariantReady();
   if (!ready.ok) {
@@ -324,11 +323,14 @@ function continueShopping() {
   router.push({ name: "products" });
 }
 
-function productLabel(item) {
+function productLabel(item: Product | null | undefined) {
   return item?.title?.trim() || "Item";
 }
 
-function onSimilarAddToCart(item, variant = null) {
+function onSimilarAddToCart(
+  item: Product,
+  variant: ProductVariant | null = null,
+) {
   if (addToCart(item, 1, variant)) {
     toast.success(`${productLabel(item)} added to cart`);
     return;
@@ -340,7 +342,7 @@ function onSimilarGoToCart() {
   router.push({ name: "cart" });
 }
 
-function onSimilarToggleFavorite(item) {
+function onSimilarToggleFavorite(item: Product) {
   const result = toggleFavorite(item);
   if (result === "added") {
     toast.favorite(`${productLabel(item)} added to favorites`);
@@ -349,7 +351,7 @@ function onSimilarToggleFavorite(item) {
   }
 }
 
-function onSimilarSeeAllOptions(item) {
+function onSimilarSeeAllOptions(item: Product) {
   if (!item?.id) return;
   router.push(productDetailsTo(item));
 }
@@ -361,8 +363,7 @@ function onSimilarViewAll() {
 }
 
 const breadcrumbItems = computed(() => {
-  /** @type {{ label: string, to?: { name: string, query?: Record<string, string> } }[]} */
-  const items = [{ label: "Home", to: { name: "products" } }];
+  const items: BreadcrumbItem[] = [{ label: "Home", to: { name: "products" } }];
 
   if (!product.value) {
     items.push({

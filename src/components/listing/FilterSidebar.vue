@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * FilterSidebar — left-hand e-commerce filters.
  *
@@ -10,19 +10,25 @@
  * FilterGroup uses `v-show` so checkbox state is kept while closed.
  */
 import { reactive, computed } from "vue";
+import type { PropType } from "vue";
 import FilterGroup from "@/components/listing/FilterGroup.vue";
+import type {
+  PriceBounds,
+  ProductFilters,
+} from "@/composables/useProductFilters";
+import type { FilterOptionLists } from "@/utils/filterOptions";
 
 const props = defineProps({
   filters: {
-    type: Object,
+    type: Object as PropType<ProductFilters>,
     required: true,
   },
   options: {
-    type: Object,
+    type: Object as PropType<FilterOptionLists>,
     required: true,
   },
   priceBounds: {
-    type: Object,
+    type: Object as PropType<PriceBounds>,
     required: true,
   },
   /** When true, render as an open mobile drawer panel. */
@@ -41,21 +47,21 @@ const FILTER_SKELETON_ROWS = 6;
 const FILTER_SKELETON_SWATCHES = 8;
 const FILTER_SKELETON_SIZES = 5;
 
-const emit = defineEmits([
-  "toggle-brand",
-  "toggle-color",
-  "toggle-size",
-  "toggle-rating",
-  "toggle-discount",
-  "toggle-in-stock",
-  "update:price-min",
-  "update:price-max",
-  "clear",
-  "close",
-]);
+const emit = defineEmits<{
+  (e: "toggle-brand", value: string): void;
+  (e: "toggle-color", value: string): void;
+  (e: "toggle-size", value: string): void;
+  (e: "toggle-rating", value: number): void;
+  (e: "toggle-discount", value: number): void;
+  (e: "toggle-in-stock"): void;
+  (e: "update:price-min", value: number): void;
+  (e: "update:price-max", value: number): void;
+  (e: "clear"): void;
+  (e: "close"): void;
+}>();
 
 /** Which filter sections are expanded. Start with Price open; lists closed. */
-const openSections = reactive({
+const openSections = reactive<Record<string, boolean>>({
   price: true,
   availability: true,
   brand: false,
@@ -65,7 +71,7 @@ const openSections = reactive({
   discount: false,
 });
 
-function toggleSection(key) {
+function toggleSection(key: string) {
   openSections[key] = !openSections[key];
 }
 
@@ -101,26 +107,32 @@ const priceFillStyle = computed(() => {
  * Clamp a typed/slid price into [bounds.min, bounds.max] and keep
  * min ≤ max. Shared by the dual-range thumbs and the number fields.
  */
-function clampPriceMin(raw) {
+function clampPriceMin(raw: unknown) {
   const { min, max } = props.priceBounds;
   let value = Number(raw);
   if (!Number.isFinite(value)) value = props.filters.priceMin;
   return Math.min(Math.max(value, min), Math.min(props.filters.priceMax, max));
 }
 
-function clampPriceMax(raw) {
+function clampPriceMax(raw: unknown) {
   const { min, max } = props.priceBounds;
   let value = Number(raw);
   if (!Number.isFinite(value)) value = props.filters.priceMax;
   return Math.max(Math.min(value, max), Math.max(props.filters.priceMin, min));
 }
 
-function onPriceMinInput(event) {
-  emit("update:price-min", clampPriceMin(event.target.value));
+function onPriceMinInput(event: Event) {
+  emit(
+    "update:price-min",
+    clampPriceMin((event.target as HTMLInputElement).value),
+  );
 }
 
-function onPriceMaxInput(event) {
-  emit("update:price-max", clampPriceMax(event.target.value));
+function onPriceMaxInput(event: Event) {
+  emit(
+    "update:price-max",
+    clampPriceMax((event.target as HTMLInputElement).value),
+  );
 }
 
 /**
@@ -128,28 +140,30 @@ function onPriceMaxInput(event) {
  * is not clamped mid-keystroke. Re-assigning the input value after
  * emit resets invalid/out-of-range text to the clamped filter value.
  */
-function onPriceMinChange(event) {
-  const next = clampPriceMin(event.target.value);
+function onPriceMinChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const next = clampPriceMin(input.value);
   emit("update:price-min", next);
-  event.target.value = String(next);
+  input.value = String(next);
 }
 
-function onPriceMaxChange(event) {
-  const next = clampPriceMax(event.target.value);
+function onPriceMaxChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const next = clampPriceMax(input.value);
   emit("update:price-max", next);
-  event.target.value = String(next);
+  input.value = String(next);
 }
 
-function isColorSelected(value) {
+function isColorSelected(value: string) {
   return props.filters.colors.includes(value);
 }
 
-function isSizeSelected(value) {
+function isSizeSelected(value: string) {
   return props.filters.sizes.includes(value);
 }
 
 /** Small count badge on the header when that group has selections. */
-function selectedCount(key) {
+function selectedCount(key: string) {
   switch (key) {
     case "brand":
       return props.filters.brands.length;

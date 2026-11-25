@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Favorites page — products saved via the heart on product cards.
  *
@@ -7,14 +7,15 @@
  * State comes from shared useWishlist + useCart.
  */
 import { computed } from "vue";
+import type { Product, ProductVariant } from "@/types/product";
 import { useRouter } from "vue-router";
 import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
 import EmptyState from "@/components/listing/EmptyState.vue";
 import ProductCard from "@/components/product/ProductCard.vue";
-import { useCart } from "@/composables/useCart.js";
-import { useWishlist } from "@/composables/useWishlist.js";
-import { useToast } from "@/composables/useToast.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
+import { useCart } from "@/composables/useCart";
+import { useWishlist } from "@/composables/useWishlist";
+import { useToast } from "@/composables/useToast";
+import { productDetailsTo } from "@/utils/productRoutes";
 
 const router = useRouter();
 const toast = useToast();
@@ -25,11 +26,11 @@ const { favoriteProducts, favoriteIds, favoriteCount, toggleFavorite } =
 /** Single crumb for this top-level page (current page has no link). */
 const breadcrumbItems = computed(() => [{ label: "Favorites" }]);
 
-function productLabel(product) {
+function productLabel(product: Product | null | undefined) {
   return product?.title?.trim() || "Item";
 }
 
-function onAddToCart(product, variant = null) {
+function onAddToCart(product: Product, variant: ProductVariant | null = null) {
   if (addToCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
     return;
@@ -41,7 +42,7 @@ function onGoToCart() {
   router.push({ name: "cart" });
 }
 
-function onToggleFavorite(product) {
+function onToggleFavorite(product: Product) {
   const result = toggleFavorite(product);
   if (result === "added") {
     toast.favorite(`${productLabel(product)} added to favorites`);
@@ -50,7 +51,7 @@ function onToggleFavorite(product) {
   }
 }
 
-function onSeeAllOptions(product) {
+function onSeeAllOptions(product: Product) {
   if (!product?.id) return;
   router.push(productDetailsTo(product));
 }

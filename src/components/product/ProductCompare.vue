@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Product } from "@/types/product";
 /**
  * ProductCompare — pick peers and show a side-by-side spec table on details.
  *
@@ -11,25 +12,26 @@
  * Rules: same category + all tags matched (any brand); 2–4 products total.
  */
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
+import type { PropType } from "vue";
 import { RouterLink } from "vue-router";
 import { Columns2, X } from "@lucide/vue";
-import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel";
+import { productDetailsTo } from "@/utils/productRoutes";
 import {
   COMPARE_MAX,
   COMPARE_MIN,
   buildCompareRows,
-} from "@/utils/compareProducts.js";
+} from "@/utils/compareProducts";
 
 const props = defineProps({
   /** The product on the details page (always included / highlighted). */
   product: {
-    type: Object,
+    type: Object as PropType<Product>,
     required: true,
   },
   /** Peers in the same category with identical tags (any brand). */
   candidates: {
-    type: Array,
+    type: Array as PropType<Product[]>,
     default: () => [],
   },
 });
@@ -43,13 +45,12 @@ const isOpen = ref(false);
  * Selected peer product ids (not including the current product).
  * Cap: COMPARE_MAX - 1 so total columns stay ≤ COMPARE_MAX.
  */
-const selectedPeerIds = ref(/** @type {(number|string)[]} */ ([]));
+const selectedPeerIds = ref<(number | string)[]>([]);
 
 const maxPeers = COMPARE_MAX - 1;
 
 const candidateMap = computed(() => {
-  /** @type {Map<string, Record<string, unknown>>} */
-  const map = new Map();
+  const map = new Map<string, Product>();
   for (const entry of props.candidates) {
     if (!entry || entry.id == null) continue;
     map.set(String(entry.id), entry);
@@ -85,7 +86,7 @@ watch(
 const selectedPeers = computed(() =>
   selectedPeerIds.value
     .map((id) => candidateMap.value.get(String(id)))
-    .filter(Boolean),
+    .filter((peer): peer is Product => Boolean(peer)),
 );
 
 /** Table columns: current product first, then selected peers. */
@@ -114,19 +115,14 @@ const selectionHint = computed(() => {
   return `Comparing ${columns.value.length} of ${COMPARE_MAX} products — you can add more.`;
 });
 
-/**
- * @param {number|string} peerId
- * @returns {boolean}
- */
-function isPeerSelected(peerId) {
+function isPeerSelected(peerId: number | string): boolean {
   return selectedPeerIds.value.some((id) => String(id) === String(peerId));
 }
 
 /**
  * Toggle a peer in/out of the comparison (respects the max).
- * @param {Record<string, unknown>} peer
  */
-function togglePeer(peer) {
+function togglePeer(peer: Product) {
   if (!peer || peer.id == null) return;
   const key = String(peer.id);
   if (isPeerSelected(key)) {

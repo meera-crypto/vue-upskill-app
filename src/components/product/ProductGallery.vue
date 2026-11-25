@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Product } from "@/types/product";
 /**
  * ProductGallery — thumbs, main stage, desktop hover zoom, favorite control.
  *
@@ -6,13 +7,14 @@
  * it keeps ProductDetailsPage as an orchestrator (load product → pass props).
  */
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
+import type { PropType } from "vue";
 import { ChevronLeft, ChevronRight, Heart } from "@lucide/vue";
-import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
-import { useHorizontalScroll } from "@/composables/useHorizontalScroll.js";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel";
+import { useHorizontalScroll } from "@/composables/useHorizontalScroll";
 
 const props = defineProps({
   product: {
-    type: Object,
+    type: Object as PropType<Product>,
     required: true,
   },
   displayName: {
@@ -28,18 +30,18 @@ const props = defineProps({
    * that index so the stage jumps without owning gallery state.
    */
   variantImageIndex: {
-    type: Number,
+    type: Number as PropType<number | null>,
     default: null,
   },
 });
 
-const emit = defineEmits(["toggle-favorite"]);
+const emit = defineEmits<{ (e: "toggle-favorite"): void }>();
 
 const selectedImageIndex = ref(0);
 const thumbsScrollEl = useTemplateRef("thumbsScroll");
 
 const isZooming = ref(false);
-const lensStyle = ref(/** @type {Record<string, string>} */ ({}));
+const lensStyle = ref<Record<string, string>>({});
 const zoomResultStyle = ref(/** @type {Record<string, string>} */ ({}));
 const ZOOM_LEVEL = 2;
 const ZOOM_RESULT_SCALE = 0.65;
@@ -108,9 +110,10 @@ watch(activeImage, (url) => {
   };
 });
 
-function onImageError(event) {
-  if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
-    event.target.src = PRODUCT_IMAGE_FALLBACK;
+function onImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (img.src !== PRODUCT_IMAGE_FALLBACK) {
+    img.src = PRODUCT_IMAGE_FALLBACK;
   }
 }
 
@@ -128,7 +131,7 @@ function scrollActiveThumbIntoView() {
   });
 }
 
-async function selectImage(index) {
+async function selectImage(index: number) {
   if (index < 0 || index >= images.value.length) return;
   selectedImageIndex.value = index;
   await nextTick();
@@ -154,10 +157,7 @@ function canUseImageZoom() {
   );
 }
 
-/**
- * @param {EventTarget | null} target
- */
-function isGalleryChromeTarget(target) {
+function isGalleryChromeTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) return false;
   return Boolean(
     target.closest(".product-details__gallery-arrow") ||
@@ -165,7 +165,7 @@ function isGalleryChromeTarget(target) {
   );
 }
 
-function onZoomEnter(event) {
+function onZoomEnter(event: MouseEvent) {
   if (!canUseImageZoom()) return;
   if (isGalleryChromeTarget(event.target)) return;
   isZooming.value = true;
@@ -175,10 +175,7 @@ function onZoomLeave() {
   clearZoom();
 }
 
-/**
- * @param {MouseEvent} event
- */
-function onZoomMove(event) {
+function onZoomMove(event: MouseEvent) {
   if (!canUseImageZoom()) return;
 
   if (isGalleryChromeTarget(event.target)) {
@@ -186,7 +183,7 @@ function onZoomMove(event) {
     return;
   }
 
-  const stage = /** @type {HTMLElement} */ (event.currentTarget);
+  const stage = event.currentTarget as HTMLElement;
   const rect = stage.getBoundingClientRect();
   const resultW = rect.width * ZOOM_RESULT_SCALE;
   const resultH = rect.height * ZOOM_RESULT_SCALE;

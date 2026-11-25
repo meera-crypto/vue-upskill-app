@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Header: logo | search | categories | home / favorites / cart / profile.
  *
@@ -23,12 +23,14 @@ import {
   useTemplateRef,
   watch,
 } from "vue";
+import type { PropType } from "vue";
 import { Home, Heart, User, ChevronLeft, ChevronRight } from "@lucide/vue";
 import logoUrl from "@/assets/images/logo.png";
-import { getCategoryIcon } from "@/utils/categoryIcons.js";
-import { useWishlist } from "@/composables/useWishlist.js";
+import { getCategoryIcon } from "@/utils/categoryIcons";
+import { useWishlist } from "@/composables/useWishlist";
 import ProductSearch from "@/components/listing/ProductSearch.vue";
 import CartButton from "@/components/cart/CartButton.vue";
+import type { FilterOptionItem } from "@/utils/filterOptions";
 
 const props = defineProps({
   /** Bound from the page via v-model:search-query */
@@ -38,22 +40,22 @@ const props = defineProps({
   },
   /** From useAppHeader → category chips */
   categories: {
-    type: Array,
+    type: Array as PropType<FilterOptionItem[]>,
     default: () => [],
   },
   /** Currently selected category slugs (listing only; empty on cart/favorites) */
   selectedCategories: {
-    type: Array,
+    type: Array as PropType<string[]>,
     default: () => [],
   },
 });
 
-const emit = defineEmits([
-  "update:searchQuery",
-  "submit-search",
-  "clear-search",
-  "toggle-category",
-]);
+const emit = defineEmits<{
+  (e: "update:searchQuery", value: string): void;
+  (e: "submit-search"): void;
+  (e: "clear-search"): void;
+  (e: "toggle-category", value: string): void;
+}>();
 
 const { favoriteCount } = useWishlist();
 
@@ -65,13 +67,10 @@ const categoriesScroll = useTemplateRef("categoriesScroll");
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);
 
-/** @type {ResizeObserver | null} */
-let headerResizeObserver = null;
-/** @type {ResizeObserver | null} */
-let categoriesResizeObserver = null;
+let headerResizeObserver: ResizeObserver | null = null;
+let categoriesResizeObserver: ResizeObserver | null = null;
 /** Tracked so we can remove the scroll listener before rebinding. */
-/** @type {HTMLElement | null} */
-let categoriesScrollEl = null;
+let categoriesScrollEl: HTMLElement | null = null;
 
 function syncHeaderHeight() {
   const height = headerEl.value?.offsetHeight ?? 0;
@@ -100,7 +99,7 @@ function updateCategoryScrollState() {
 }
 
 /** Scroll about 60% of the visible width so users can see overlapping context. */
-function scrollCategories(direction) {
+function scrollCategories(direction: number) {
   const el = categoriesScroll.value;
   if (!el) return;
 
@@ -135,7 +134,7 @@ function bindCategoryScrollObservers() {
   updateCategoryScrollState();
 }
 
-function isCategorySelected(value) {
+function isCategorySelected(value: string) {
   return props.selectedCategories.includes(value);
 }
 

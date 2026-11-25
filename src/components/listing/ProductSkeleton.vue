@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ProductSkeleton — placeholder cards while the listing loads.
  *

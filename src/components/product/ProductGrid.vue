@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Product } from "@/types/product";
 /**
  * ProductGrid — toolbar, filters, and product grid.
  *
@@ -9,6 +10,7 @@
  * parent so the page can control the skeleton pulse and mobile Load more.
  */
 import { ref, computed, onUnmounted, watch, useTemplateRef, inject } from "vue";
+import type { PropType } from "vue";
 import { SlidersHorizontal } from "@lucide/vue";
 import ProductCard from "@/components/product/ProductCard.vue";
 import ProductSkeleton from "@/components/listing/ProductSkeleton.vue";
@@ -17,14 +19,15 @@ import FilterSidebar from "@/components/listing/FilterSidebar.vue";
 import ActiveFilterChips from "@/components/listing/ActiveFilterChips.vue";
 import ProductPagination from "@/components/listing/ProductPagination.vue";
 import SortDropdown from "@/components/listing/SortDropdown.vue";
-import { SORT_OPTIONS } from "@/utils/productSort.js";
-import { SEARCH_MIN_LENGTH } from "@/composables/useProducts.js";
-import { useFocusTrap } from "@/composables/useFocusTrap.js";
-import { LISTING_CONTEXT_KEY } from "@/composables/listingContext.js";
+import { SORT_OPTIONS } from "@/utils/productSort";
+import { SEARCH_MIN_LENGTH } from "@/composables/useProducts";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { LISTING_CONTEXT_KEY } from "@/composables/listingContext";
+import type { ListingContext } from "@/composables/listingContext";
 
 const props = defineProps({
   products: {
-    type: Array,
+    type: Array as PropType<Product[]>,
     required: true,
   },
   total: {
@@ -50,7 +53,7 @@ const props = defineProps({
     default: false,
   },
   error: {
-    type: String,
+    type: String as PropType<string | null>,
     default: null,
   },
   /** md+: numbered page controls. False on mobile (Load more instead). */
@@ -85,12 +88,14 @@ const props = defineProps({
   },
 });
 
-const listing = inject(LISTING_CONTEXT_KEY);
-if (!listing) {
+const injectedListing = inject(LISTING_CONTEXT_KEY);
+if (!injectedListing) {
   throw new Error(
     "ProductGrid requires LISTING_CONTEXT_KEY from ProductListingPage",
   );
 }
+// Re-bind with the non-undefined type so closures below keep the narrowing.
+const listing: ListingContext = injectedListing;
 
 const filtersOpen = ref(false);
 const filterSidebarRef = useTemplateRef("filterSidebarRef");
@@ -118,11 +123,11 @@ onUnmounted(() => {
   document.body.style.overflow = "";
 });
 
-function isFavorite(productId) {
+function isFavorite(productId: number | string) {
   return listing.favorites.includes(productId);
 }
 
-function quantityFor(productId) {
+function quantityFor(productId: number | string) {
   return listing.cart[productId] ?? 0;
 }
 
@@ -151,11 +156,11 @@ const showEmptyFilterActions = computed(
   () => Boolean(props.searchQuery.trim()) || listing.hasActiveFilters,
 );
 
-function onPriceMin(value) {
+function onPriceMin(value: number | string) {
   listing.setPriceRange(value, listing.filters.priceMax);
 }
 
-function onPriceMax(value) {
+function onPriceMax(value: number | string) {
   listing.setPriceRange(listing.filters.priceMin, value);
 }
 </script>

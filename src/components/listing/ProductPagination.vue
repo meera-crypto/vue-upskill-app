@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ProductPagination — page controls under the product grid.
  *

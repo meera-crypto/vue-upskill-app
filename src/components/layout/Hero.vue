@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Hero — home-page banner above the product list (all breakpoints).
  * Used on `/` only; category pages use `CategoryBanner.vue` instead.
@@ -18,11 +18,12 @@
  * keep the two links as siblings instead.
  */
 import { computed } from "vue";
+import type { PropType } from "vue";
 import { RouterLink } from "vue-router";
-import { useProducts } from "@/composables/useProducts.js";
-import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
-import { listingTo } from "@/utils/listingRoutes.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
+import { useProducts } from "@/composables/useProducts";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel";
+import { listingTo } from "@/utils/listingRoutes";
+import { productDetailsTo } from "@/utils/productRoutes";
 
 defineProps({
   title: {
@@ -50,7 +51,7 @@ defineProps({
   },
   /** Promo tags shown on the category banner. */
   bannerTags: {
-    type: Array,
+    type: Array as PropType<string[]>,
     default: () => ["Skincare", "Makeup", "Fragrance", "Self-care"],
   },
 });

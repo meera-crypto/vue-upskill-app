@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ProductCarousel — shared horizontal product row with overlay arrows.
  *
@@ -12,7 +12,7 @@
  */
 import { computed, useTemplateRef, toRef } from "vue";
 import { ChevronLeft, ChevronRight } from "@lucide/vue";
-import { useHorizontalScroll } from "@/composables/useHorizontalScroll.js";
+import { useHorizontalScroll } from "@/composables/useHorizontalScroll";
 
 const props = defineProps({
   /** Section heading text. */

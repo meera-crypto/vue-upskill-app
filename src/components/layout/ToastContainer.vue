@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Renders the shared toast queue from useToast().
  * Mount once near the app root so messages appear above page chrome.
@@ -7,7 +7,7 @@
  * toasts without interrupting the user mid-action.
  */
 import { X } from "@lucide/vue";
-import { useToast } from "@/composables/useToast.js";
+import { useToast } from "@/composables/useToast";
 
 const { toasts, dismiss } = useToast();
 </script>

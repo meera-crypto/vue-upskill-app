@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * FilterGroup — one collapsible filter accordion section.
  *

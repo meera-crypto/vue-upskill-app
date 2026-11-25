@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * 404 page — shown for any URL that does not match a defined route.
  *

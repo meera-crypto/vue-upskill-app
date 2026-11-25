@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * CategoryBanner — hero strip for a category page (`/:category`).
  *
@@ -13,7 +13,7 @@
  */
 import { computed } from "vue";
 import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
-import { getCategoryBanner } from "@/utils/categoryGroups.js";
+import { getCategoryBanner } from "@/utils/categoryGroups";
 
 const props = defineProps({
   /** Storefront category slug (e.g. beauty, gadgets). */

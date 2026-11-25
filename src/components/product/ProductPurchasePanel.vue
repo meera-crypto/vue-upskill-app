@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Product, ProductOption, ProductVariant } from "@/types/product";
 /**
  * ProductPurchasePanel — title, price, variants, qty, cart / buy actions.
  *
@@ -7,15 +8,16 @@
  * keeping different chrome around the buy box.
  */
 import { computed, ref, watch } from "vue";
+import type { PropType } from "vue";
 import { Minus, Plus, Star } from "@lucide/vue";
-import { hasValidDiscount } from "@/utils/productModel.js";
-import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
-import { formatSelectedOptions } from "@/utils/variants.js";
+import { hasValidDiscount } from "@/utils/productModel";
+import { getRatingBadgeTone } from "@/utils/ratingBadge";
+import { formatSelectedOptions } from "@/utils/variants";
 import ProductRating from "@/components/product/ProductRating.vue";
 
 const props = defineProps({
   product: {
-    type: Object,
+    type: Object as PropType<Product>,
     required: true,
   },
   displayName: {
@@ -27,7 +29,7 @@ const props = defineProps({
     default: "",
   },
   selectedOptions: {
-    type: Object,
+    type: Object as PropType<Record<string, string>>,
     required: true,
   },
   hasVariants: {
@@ -35,11 +37,11 @@ const props = defineProps({
     default: false,
   },
   optionGroups: {
-    type: Array,
+    type: Array as PropType<ProductOption[]>,
     default: () => [],
   },
   activeVariant: {
-    type: Object,
+    type: Object as PropType<ProductVariant | null>,
     default: null,
   },
   productHasStock: {
@@ -79,22 +81,22 @@ const props = defineProps({
     default: false,
   },
   optionValueAvailable: {
-    type: Function,
+    type: Function as PropType<(name: string, value: string) => boolean>,
     required: true,
   },
   optionSwatchHex: {
-    type: Function,
+    type: Function as PropType<(name: string, value: string) => string>,
     required: true,
   },
 });
 
-const emit = defineEmits([
-  "select-option",
-  "add-to-cart",
-  "buy-now",
-  "notify-me",
-  "open-compare",
-]);
+const emit = defineEmits<{
+  (e: "select-option", optionName: string, optionValue: string): void;
+  (e: "add-to-cart", quantity: number | null): void;
+  (e: "buy-now", quantity: number | null): void;
+  (e: "notify-me"): void;
+  (e: "open-compare"): void;
+}>();
 
 const quantityInput = ref("1");
 
@@ -112,8 +114,9 @@ const ratingBadgeTone = computed(() =>
 );
 
 const ratingLabel = computed(() => {
-  if (!hasRating.value) return "";
-  const score = props.product.rating.toFixed(1);
+  const rating = props.product?.rating;
+  if (!hasRating.value || typeof rating !== "number") return "";
+  const score = rating.toFixed(1);
   const reviews = props.product.reviewCount;
   if (typeof reviews === "number" && reviews > 0) {
     return `${score} out of 5 stars, ${reviews} review${reviews === 1 ? "" : "s"}`;
@@ -188,10 +191,7 @@ watch(
   },
 );
 
-/**
- * @param {number} n
- */
-function setQtyInput(n) {
+function setQtyInput(n: number) {
   const clamped = Math.min(props.maxQuantity, Math.max(1, Math.floor(n)));
   quantityInput.value = String(clamped);
 }
@@ -209,20 +209,13 @@ function onQtyBlur() {
   quantityInput.value = String(qty == null ? 1 : qty);
 }
 
-/**
- * @returns {number | null}
- */
-function quantityForCart() {
+function quantityForCart(): number | null {
   return resolvedQuantity.value;
 }
 
 defineExpose({ quantityForCart });
 
-/**
- * @param {string} optionName
- * @param {string} optionValue
- */
-function onSelectOption(optionName, optionValue) {
+function onSelectOption(optionName: string, optionValue: string) {
   emit("select-option", optionName, optionValue);
 }
 
@@ -252,7 +245,7 @@ function onBuyOrNotify() {
     <ProductRating
       v-if="hasRating"
       size="lg"
-      :rating="product.rating"
+      :rating="product.rating ?? 0"
       :review-count="product.reviewCount"
       :tone="ratingBadgeTone"
       :label="ratingLabel"

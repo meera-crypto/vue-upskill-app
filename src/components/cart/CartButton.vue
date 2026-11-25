@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * CartButton — header/nav link to the cart with a live count badge.
  *
@@ -6,7 +6,7 @@
  * to pass the count. Same shared module-scope cart as the rest of the app.
  */
 import { ShoppingCart } from "@lucide/vue";
-import { useCart } from "@/composables/useCart.js";
+import { useCart } from "@/composables/useCart";
 
 const { cartCount } = useCart();
 </script>

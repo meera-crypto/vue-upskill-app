@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Cart page — shows every line in the shared useCart() bag.
  *
@@ -9,15 +9,16 @@
  * - Variant lines use `line.key` (variant id), not only product.id
  */
 import { computed } from "vue";
+import type { CartLineProduct } from "@/types/product";
 import { useRouter } from "vue-router";
 import { Minus, Plus, Trash2 } from "@lucide/vue";
 import Breadcrumbs from "@/components/layout/Breadcrumbs.vue";
 import EmptyState from "@/components/listing/EmptyState.vue";
-import { useCart } from "@/composables/useCart.js";
-import { useToast } from "@/composables/useToast.js";
-import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
-import { formatSelectedOptions } from "@/utils/variants.js";
+import { useCart } from "@/composables/useCart";
+import { useToast } from "@/composables/useToast";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel";
+import { productDetailsTo } from "@/utils/productRoutes";
+import { formatSelectedOptions } from "@/utils/variants";
 
 const router = useRouter();
 const toast = useToast();
@@ -34,15 +35,15 @@ const {
 /** Single crumb for this top-level page (current page has no link). */
 const breadcrumbItems = computed(() => [{ label: "Cart" }]);
 
-function productLabel(product) {
+function productLabel(product: CartLineProduct | null | undefined) {
   return product?.title?.trim() || "Item";
 }
 
-function lineOptionsLabel(product) {
+function lineOptionsLabel(product: CartLineProduct | null | undefined) {
   return formatSelectedOptions(product?.selectedOptions);
 }
 
-function onRemove(line) {
+function onRemove(line: { key: string; product: CartLineProduct }) {
   removeFromCart(line.key);
   toast.info(`${productLabel(line.product)} removed from cart`);
 }
@@ -52,9 +53,10 @@ function onClear() {
   toast.info("Cart cleared");
 }
 
-function onImageError(event) {
-  if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
-    event.target.src = PRODUCT_IMAGE_FALLBACK;
+function onImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (img.src !== PRODUCT_IMAGE_FALLBACK) {
+    img.src = PRODUCT_IMAGE_FALLBACK;
   }
 }
 
@@ -62,7 +64,7 @@ function continueShopping() {
   router.push({ name: "products" });
 }
 
-function lineMax(product) {
+function lineMax(product: CartLineProduct) {
   const stock = Number(product.stock);
   return Number.isFinite(stock) && stock > 0 ? stock : 1;
 }

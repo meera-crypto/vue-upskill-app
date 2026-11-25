@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Header search field + product suggestions dropdown.
  *
@@ -27,11 +27,13 @@ import { X, Search } from "@lucide/vue";
 import {
   highlightSearchText,
   useSearchSuggestions,
-} from "@/composables/useSearchSuggestions.js";
-import { SEARCH_MIN_LENGTH } from "@/composables/useProducts.js";
-import { mediaQueries } from "@/constants/breakpoints.js";
-import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
+} from "@/composables/useSearchSuggestions";
+import { SEARCH_MIN_LENGTH } from "@/composables/useProducts";
+import { mediaQueries } from "@/constants/breakpoints";
+import { PRODUCT_IMAGE_FALLBACK } from "@/utils/productModel";
+import { productDetailsTo } from "@/utils/productRoutes";
+import type { Product } from "@/types/product";
+import type { Suggestion } from "@/composables/useSearchSuggestions";
 
 const props = defineProps({
   /** Current search text from the parent (App.vue / listing URL). */
@@ -49,11 +51,11 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "update:searchQuery",
-  "submit-search",
-  "clear-search",
-]);
+const emit = defineEmits<{
+  (e: "update:searchQuery", value: string): void;
+  (e: "submit-search"): void;
+  (e: "clear-search"): void;
+}>();
 
 const router = useRouter();
 const searchRootEl = useTemplateRef("searchRootEl");
@@ -77,9 +79,8 @@ const isMobileLayout = ref(
 );
 const mobileSearchOpen = ref(false);
 /** Ignore the next blur close when clicking inside the dropdown. */
-let blurCloseTimer = null;
-/** @type {MediaQueryList | null} */
-let untilMdMql = null;
+let blurCloseTimer: ReturnType<typeof setTimeout> | null = null;
+let untilMdMql: MediaQueryList | null = null;
 
 const searchQueryRef = computed(() => props.searchQuery);
 const selectedCategoryRef = computed(() => props.selectedCategory);
@@ -104,9 +105,9 @@ const suggestionsEmptyMessage = computed(() => {
 
 const suggestionListId = "header-search-suggestions";
 
-function onSearchInput(event) {
+function onSearchInput(event: Event) {
   activeSuggestion.value = -1;
-  emit("update:searchQuery", event.target.value);
+  emit("update:searchQuery", (event.target as HTMLInputElement).value);
 }
 
 function clearSearch() {
@@ -139,7 +140,9 @@ function closeMobileSearch() {
   activeSuggestion.value = -1;
 }
 
-function syncMobileLayout(event) {
+function syncMobileLayout(
+  event?: MediaQueryList | MediaQueryListEvent | null,
+) {
   const matches = event?.matches ?? untilMdMql?.matches ?? false;
   isMobileLayout.value = matches;
   if (!matches) {
@@ -154,23 +157,21 @@ function cancelBlurClose() {
   }
 }
 
-function suggestionImage(product) {
+function suggestionImage(product: Product | null | undefined) {
   const thumb =
     typeof product?.thumbnail === "string" ? product.thumbnail.trim() : "";
   const image = typeof product?.image === "string" ? product.image.trim() : "";
   return thumb || image || PRODUCT_IMAGE_FALLBACK;
 }
 
-function onSuggestionImageError(event) {
-  if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
-    event.target.src = PRODUCT_IMAGE_FALLBACK;
+function onSuggestionImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (img.src !== PRODUCT_IMAGE_FALLBACK) {
+    img.src = PRODUCT_IMAGE_FALLBACK;
   }
 }
 
-/**
- * @param {{ product?: Record<string, unknown> }} item
- */
-function selectSuggestion(item) {
+function selectSuggestion(item: Suggestion) {
   cancelBlurClose();
   searchFocused.value = false;
   activeSuggestion.value = -1;
@@ -200,7 +201,7 @@ function submitTypedSearch() {
 }
 
 /** Highlight the typed search text inside a suggestion title. */
-function suggestionLabelParts(label) {
+function suggestionLabelParts(label: string) {
   return highlightSearchText(label, props.searchQuery);
 }
 
@@ -242,13 +243,13 @@ function scrollActiveSuggestionIntoView() {
  * Update the active index, then scroll after Vue paints the --active class.
  * Calling scroll from the key handler (not only a watch) keeps arrowing reliable.
  */
-async function moveActiveSuggestion(nextIndex) {
+async function moveActiveSuggestion(nextIndex: number) {
   activeSuggestion.value = nextIndex;
   await nextTick();
   scrollActiveSuggestionIntoView();
 }
 
-function onSearchKeydown(event) {
+function onSearchKeydown(event: KeyboardEvent) {
   if (event.key === "Enter") {
     event.preventDefault();
     if (showSuggestions.value) {
@@ -307,9 +308,9 @@ function onSearchKeydown(event) {
 }
 
 /** Close suggestions when the user clicks outside the search control. */
-function onDocumentPointerDown(event) {
+function onDocumentPointerDown(event: PointerEvent) {
   const root = searchRootEl.value;
-  if (!root || root.contains(event.target)) return;
+  if (!root || root.contains(event.target as Node)) return;
   searchFocused.value = false;
   activeSuggestion.value = -1;
   /* Collapse the mobile expanded field when tapping outside (keep typed query). */

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ActiveFilterChips — shows each selected filter as a removable chip,
  * plus a Clear all action appended after the last chip.
@@ -9,14 +9,20 @@
  *
  * Vue idea: v-if removes the element from the DOM (and layout) when false.
  */
+import type { PropType } from "vue";
+import type { ActiveFilterChip } from "@/composables/useProductFilters";
+
 defineProps({
   chips: {
-    type: Array,
+    type: Array as PropType<ActiveFilterChip[]>,
     default: () => [],
   },
 });
 
-const emit = defineEmits(["remove", "clear"]);
+const emit = defineEmits<{
+  (e: "remove", chip: ActiveFilterChip): void;
+  (e: "clear"): void;
+}>();
 </script>
 
 <template>

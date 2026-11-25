@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Product, ProductVariant } from "@/types/product";
 /**
  * ProductQuickViewDialog — modal preview from the card Eye button.
  *
@@ -6,19 +7,20 @@
  * composable the details page uses — so option rules stay in one place.
  */
 import { computed, nextTick, onUnmounted, ref, watch } from "vue";
+import type { PropType } from "vue";
 import { RouterLink } from "vue-router";
 import { ChevronLeft, ChevronRight, Heart, Star, X } from "@lucide/vue";
 import {
   PRODUCT_IMAGE_FALLBACK,
   hasValidDiscount,
-} from "@/utils/productModel.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
-import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
-import { useCart } from "@/composables/useCart.js";
-import { useToast } from "@/composables/useToast.js";
-import { useFocusTrap } from "@/composables/useFocusTrap.js";
-import { useVariantSelection } from "@/composables/useVariantSelection.js";
-import { cartLineKey } from "@/utils/variants.js";
+} from "@/utils/productModel";
+import { productDetailsTo } from "@/utils/productRoutes";
+import { getRatingBadgeTone } from "@/utils/ratingBadge";
+import { useCart } from "@/composables/useCart";
+import { useToast } from "@/composables/useToast";
+import { useFocusTrap } from "@/composables/useFocusTrap";
+import { useVariantSelection } from "@/composables/useVariantSelection";
+import { cartLineKey } from "@/utils/variants";
 import ProductPrice from "@/components/product/ProductPrice.vue";
 import ProductRating from "@/components/product/ProductRating.vue";
 
@@ -28,7 +30,7 @@ const props = defineProps({
     default: false,
   },
   product: {
-    type: Object,
+    type: Object as PropType<Product>,
     required: true,
   },
   favorited: {
@@ -37,27 +39,27 @@ const props = defineProps({
   },
   /** Option map from the card when the dialog opens (may be empty). */
   initialOptions: {
-    type: Object,
+    type: Object as PropType<Record<string, string>>,
     default: () => ({}),
   },
 });
 
-const emit = defineEmits([
-  "update:open",
-  "add-to-cart",
-  "go-to-cart",
-  "toggle-favorite",
-]);
+const emit = defineEmits<{
+  (e: "update:open", value: boolean): void;
+  (e: "add-to-cart", product: Product, variant?: ProductVariant | null): void;
+  (e: "go-to-cart", product: Product): void;
+  (e: "toggle-favorite", product: Product): void;
+}>();
 
 const toast = useToast();
 const { isInCart } = useCart();
 
-const dialogEl = ref(/** @type {HTMLElement | null} */ (null));
+const dialogEl = ref<HTMLElement | null>(null);
 const selectedImageIndex = ref(0);
 
 const isOpen = computed({
   get: () => props.open,
-  set: (value) => emit("update:open", value),
+  set: (value: boolean) => emit("update:open", value),
 });
 
 useFocusTrap(dialogEl, isOpen, {
@@ -126,8 +128,9 @@ const ratingBadgeTone = computed(() =>
 );
 
 const ratingLabel = computed(() => {
-  if (!hasRating.value) return "";
-  const score = props.product.rating.toFixed(1);
+  const rating = props.product.rating;
+  if (!hasRating.value || typeof rating !== "number") return "";
+  const score = rating.toFixed(1);
   const reviews = props.product.reviewCount;
   if (typeof reviews === "number" && reviews > 0) {
     return `${score} out of 5 stars, ${reviews} review${reviews === 1 ? "" : "s"}`;
@@ -137,8 +140,7 @@ const ratingLabel = computed(() => {
 
 const galleryImages = computed(() => {
   const raw = Array.isArray(props.product?.images) ? props.product.images : [];
-  /** @type {string[]} */
-  const list = [];
+  const list: string[] = [];
   for (const entry of raw) {
     if (typeof entry !== "string") continue;
     const url = entry.trim();
@@ -247,13 +249,14 @@ function close() {
   isOpen.value = false;
 }
 
-function onBackdropClick(event) {
+function onBackdropClick(event: MouseEvent) {
   if (event.target === event.currentTarget) close();
 }
 
-function onImageError(event) {
-  if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
-    event.target.src = PRODUCT_IMAGE_FALLBACK;
+function onImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (img.src !== PRODUCT_IMAGE_FALLBACK) {
+    img.src = PRODUCT_IMAGE_FALLBACK;
   }
 }
 
@@ -464,7 +467,7 @@ function onViewDetails() {
 
             <ProductRating
               v-if="hasRating"
-              :rating="product.rating"
+              :rating="product.rating ?? 0"
               :review-count="product.reviewCount"
               :tone="ratingBadgeTone"
               :label="ratingLabel"

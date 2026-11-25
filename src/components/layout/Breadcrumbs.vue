@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Breadcrumbs — shared trail for Favorites, Cart, and Product details.
  *
@@ -9,11 +9,14 @@
  *
  *
  */
+import type { PropType } from "vue";
+import type { BreadcrumbItem } from "@/types/ui";
+
 defineProps({
   items: {
-    type: Array,
+    type: Array as PropType<BreadcrumbItem[]>,
     required: true,
-    validator(value) {
+    validator(value: BreadcrumbItem[]) {
       return (
         Array.isArray(value) &&
         value.length > 0 &&

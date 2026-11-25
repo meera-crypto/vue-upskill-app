@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * SortDropdown — labeled <select> for the product listing toolbar.
  *
@@ -7,9 +7,12 @@
  *   (parent writes `v-model="filters.sort"`; this component emits updates)
  * - Props for the option list so the composable owns the allowed values
  */
+import type { PropType } from "vue";
+import type { SortOption } from "@/utils/productSort";
+
 defineProps({
   options: {
-    type: Array,
+    type: Array as PropType<SortOption[]>,
     required: true,
   },
 });

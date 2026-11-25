@@ -1,17 +1,19 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ProductPrice — current price, optional original price, optional % off.
  *
  * Presentational only: parents compute `price` / discount flags and pass them in.
  * Keeps card and details pricing markup consistent.
  */
+import type { PropType } from "vue";
+
 defineProps({
   price: {
     type: Number,
     required: true,
   },
   originalPrice: {
-    type: Number,
+    type: Number as PropType<number | null>,
     default: null,
   },
   showDiscount: {

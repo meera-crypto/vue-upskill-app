@@ -1,4 +1,5 @@
-<script setup>
+<script setup lang="ts">
+import type { Product } from "@/types/product";
 /**
  * ProductCard — shows ONE product and talks to parents with emit.
  *
@@ -21,23 +22,25 @@
  * Quick View (Eye) opens ProductQuickViewDialog for a preview (+ variants).
  */
 import { computed, ref } from "vue";
+import type { PropType } from "vue";
+import type { ProductVariant } from "@/types/product";
 import { RouterLink } from "vue-router";
 import { Eye, Heart, Star, X } from "@lucide/vue";
 import {
   PRODUCT_IMAGE_FALLBACK,
   hasValidDiscount,
-} from "@/utils/productModel.js";
-import { mediaQueries } from "@/constants/breakpoints.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
-import { getRatingBadgeTone } from "@/utils/ratingBadge.js";
-import { productHasVariants } from "@/utils/variants.js";
+} from "@/utils/productModel";
+import { mediaQueries } from "@/constants/breakpoints";
+import { productDetailsTo } from "@/utils/productRoutes";
+import { getRatingBadgeTone } from "@/utils/ratingBadge";
+import { productHasVariants } from "@/utils/variants";
 import ProductPrice from "@/components/product/ProductPrice.vue";
 import ProductRating from "@/components/product/ProductRating.vue";
 import ProductQuickViewDialog from "@/components/product/ProductQuickViewDialog.vue";
 
 const props = defineProps({
   product: {
-    type: Object,
+    type: Object as PropType<Product>,
     required: true,
   },
   favorited: {
@@ -59,12 +62,12 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits([
-  "add-to-cart",
-  "go-to-cart",
-  "toggle-favorite",
-  "see-all-options",
-]);
+const emit = defineEmits<{
+  (e: "add-to-cart", product: Product, variant?: ProductVariant | null): void;
+  (e: "go-to-cart", product: Product): void;
+  (e: "toggle-favorite", product: Product): void;
+  (e: "see-all-options", product: Product): void;
+}>();
 
 /** Eye button → ProductQuickViewDialog. */
 const quickViewOpen = ref(false);
@@ -128,8 +131,9 @@ const ratingBadgeTone = computed(() =>
 );
 
 const ratingLabel = computed(() => {
-  if (!hasRating.value) return "";
-  const score = props.product.rating.toFixed(1);
+  const rating = props.product.rating;
+  if (!hasRating.value || typeof rating !== "number") return "";
+  const score = rating.toFixed(1);
   const reviews = props.product.reviewCount;
   if (typeof reviews === "number" && reviews > 0) {
     return `${score} out of 5 stars, ${reviews} review${reviews === 1 ? "" : "s"}`;
@@ -142,8 +146,7 @@ const displayImage = computed(() => props.product.image);
 /** Deduped gallery URLs from the product (primary first when present). */
 const galleryImages = computed(() => {
   const raw = Array.isArray(props.product.images) ? props.product.images : [];
-  /** @type {string[]} */
-  const list = [];
+  const list: string[] = [];
   for (const entry of raw) {
     if (typeof entry !== "string") continue;
     const url = entry.trim();
@@ -180,9 +183,10 @@ const displayPrice = computed(() => Number(props.product.price) || 0);
 /** Details route — options are chosen on the PDP, not on the card. */
 const detailsTo = computed(() => productDetailsTo(props.product));
 
-function onImageError(event) {
-  if (event.target.src !== PRODUCT_IMAGE_FALLBACK) {
-    event.target.src = PRODUCT_IMAGE_FALLBACK;
+function onImageError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  if (img.src !== PRODUCT_IMAGE_FALLBACK) {
+    img.src = PRODUCT_IMAGE_FALLBACK;
   }
 }
 
@@ -191,11 +195,11 @@ function onAddToCart() {
   emit("add-to-cart", props.product);
 }
 
-function onGoToCart(product) {
+function onGoToCart(product: Product) {
   emit("go-to-cart", product);
 }
 
-function onCartCta(product) {
+function onCartCta(product: Product) {
   if (inCart.value) {
     onGoToCart(product);
   } else {
@@ -203,12 +207,12 @@ function onCartCta(product) {
   }
 }
 
-function onToggleFavorite(product) {
+function onToggleFavorite(product: Product) {
   emit("toggle-favorite", product);
 }
 
 /** Variant CTA + out-of-stock CTA → product details. */
-function onSeeAllOptions(product) {
+function onSeeAllOptions(product: Product) {
   emit("see-all-options", product);
 }
 
@@ -216,7 +220,10 @@ function openQuickView() {
   quickViewOpen.value = true;
 }
 
-function onQuickViewAddToCart(product, variant = null) {
+function onQuickViewAddToCart(
+  product: Product,
+  variant: ProductVariant | null = null,
+) {
   emit("add-to-cart", product, variant);
 }
 </script>
@@ -339,7 +346,7 @@ function onQuickViewAddToCart(product, variant = null) {
         >
           <ProductRating
             v-if="hasRating"
-            :rating="product.rating"
+            :rating="product.rating ?? 0"
             :review-count="product.reviewCount"
             :tone="ratingBadgeTone"
             :label="ratingLabel"

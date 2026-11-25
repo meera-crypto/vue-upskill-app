@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * Listing view used for:
  * - Home `/` — all products + home Hero
@@ -25,17 +25,18 @@ import Hero from "@/components/layout/Hero.vue";
 import CategoryBanner from "@/components/layout/CategoryBanner.vue";
 import ProductGrid from "@/components/product/ProductGrid.vue";
 import RecentlyViewedProducts from "@/components/product/RecentlyViewedProducts.vue";
-import { useProducts } from "@/composables/useProducts.js";
-import { useProductFilters } from "@/composables/useProductFilters.js";
-import { usePagination } from "@/composables/usePagination.js";
-import { useListingQuerySync } from "@/composables/useListingQuerySync.js";
-import { useToast } from "@/composables/useToast.js";
-import { useCart } from "@/composables/useCart.js";
-import { useWishlist } from "@/composables/useWishlist.js";
-import { LISTING_CONTEXT_KEY } from "@/composables/listingContext.js";
-import { mediaQueries } from "@/constants/breakpoints.js";
-import { productDetailsTo } from "@/utils/productRoutes.js";
-import { categoryFromRoute } from "@/utils/listingRoutes.js";
+import { useProducts } from "@/composables/useProducts";
+import { useProductFilters } from "@/composables/useProductFilters";
+import { usePagination } from "@/composables/usePagination";
+import { useListingQuerySync } from "@/composables/useListingQuerySync";
+import { useToast } from "@/composables/useToast";
+import { useCart } from "@/composables/useCart";
+import { useWishlist } from "@/composables/useWishlist";
+import { LISTING_CONTEXT_KEY } from "@/composables/listingContext";
+import { mediaQueries } from "@/constants/breakpoints";
+import { productDetailsTo } from "@/utils/productRoutes";
+import type { Product, ProductVariant } from "@/types/product";
+import { categoryFromRoute } from "@/utils/listingRoutes";
 
 const route = useRoute();
 
@@ -102,8 +103,7 @@ useListingQuerySync({
 
 const listRefreshing = ref(false);
 const discoveryWatchReady = ref(false);
-/** @type {ReturnType<typeof setTimeout> | null} */
-let listRefreshTimer = null;
+let listRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 const LIST_REFRESH_MS = 280;
 
 function pulseListRefresh() {
@@ -138,8 +138,7 @@ watch(
 
 const isMobile = ref(false);
 const mobileVisibleCount = ref(PAGE_SIZE);
-/** @type {MediaQueryList | null} */
-let mobileMediaQuery = null;
+let mobileMediaQuery: MediaQueryList | null = null;
 
 function syncIsMobile() {
   isMobile.value = mobileMediaQuery?.matches ?? false;
@@ -214,11 +213,11 @@ const toast = useToast();
 const { cartQuantities, addToCart: putInCart } = useCart();
 const { favoriteIds, toggleFavorite: toggleFavoriteId } = useWishlist();
 
-function productLabel(product) {
+function productLabel(product: Product | null | undefined) {
   return product?.title?.trim() || "Item";
 }
 
-function addToCart(product, variant = null) {
+function addToCart(product: Product, variant: ProductVariant | null = null) {
   if (putInCart(product, 1, variant)) {
     toast.success(`${productLabel(product)} added to cart`);
     return;
@@ -230,12 +229,12 @@ function goToCart() {
   router.push({ name: "cart" });
 }
 
-function seeAllOptions(product) {
+function seeAllOptions(product: Product) {
   if (!product?.id) return;
   router.push(productDetailsTo(product));
 }
 
-function toggleFavorite(product) {
+function toggleFavorite(product: Product) {
   const result = toggleFavoriteId(product);
   if (result === "added") {
     toast.favorite(`${productLabel(product)} added to favorites`);

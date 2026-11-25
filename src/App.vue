@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * App.vue — root shell.
  *
@@ -11,7 +11,7 @@
 import AppHeader from "@/components/layout/AppHeader.vue";
 import AppFooter from "@/components/layout/AppFooter.vue";
 import ToastContainer from "@/components/layout/ToastContainer.vue";
-import { useAppHeader } from "@/composables/useAppHeader.js";
+import { useAppHeader } from "@/composables/useAppHeader";
 
 const {
   searchQuery,

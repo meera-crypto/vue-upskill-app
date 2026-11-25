@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 /**
  * ProductRating — star badge + score + optional review count.
  *
@@ -6,17 +6,19 @@
  * (never invent stars). `tone` maps to shared `.rating-badge--*` colors.
  * `size="lg"` is used on product details for a slightly larger badge.
  */
+import type { PropType } from "vue";
+
 defineProps({
   rating: {
     type: Number,
     required: true,
   },
   reviewCount: {
-    type: Number,
+    type: Number as PropType<number | null>,
     default: null,
   },
   tone: {
-    type: String,
+    type: String as PropType<string | null>,
     default: "",
   },
   label: {
@@ -26,7 +28,7 @@ defineProps({
   size: {
     type: String,
     default: "md",
-    validator: (value) => ["md", "lg"].includes(value),
+    validator: (value: string) => ["md", "lg"].includes(value),
   },
 });
 </script>
